@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { nanoid } from "nanoid";
 
+import { LOCAL_PROXY_URL } from "@/constant/runtime-config";
 import i18n from "@/i18n";
 
 export type ApiCallFormat = "openai" | "gemini";
@@ -78,6 +79,8 @@ const OPENAI_BASE_URL = "https://api.openai.com";
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com";
 export const LOCAL_PROXY_PACKAGE = "@basketikun/canvas-proxy";
 export const DEFAULT_LOCAL_PROXY_URL = "http://127.0.0.1:23210";
+// The desktop client injects the address of the local proxy it starts, so the proxy is on by default there.
+export const RUNTIME_LOCAL_PROXY_URL = LOCAL_PROXY_URL;
 
 export const defaultConfig: AiConfig = {
     channelMode: "local",
@@ -121,8 +124,8 @@ export const defaultConfig: AiConfig = {
     background: "",
     count: "1",
     canvasImageCount: "3",
-    proxyEnabled: false,
-    proxyUrl: DEFAULT_LOCAL_PROXY_URL,
+    proxyEnabled: Boolean(RUNTIME_LOCAL_PROXY_URL),
+    proxyUrl: RUNTIME_LOCAL_PROXY_URL || DEFAULT_LOCAL_PROXY_URL,
     nodeRegenerateBehavior: "new-node",
     autoFocusOnSelect: false,
 };

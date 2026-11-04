@@ -385,6 +385,7 @@ export default {
             title: "Local proxy",
             description: "Forward provider requests (models, image, video, text, audio) and WebDAV sync through a proxy running on your machine to avoid browser CORS errors.",
             startHint: "Run this in a terminal first, and keep it running while you use the canvas:",
+            builtinHint: "The desktop client bundles the local proxy and starts it automatically, so no command is needed.",
             address: "Proxy address",
             addressDescription: "Must match the address printed by the command above.",
             channelHint: "Keep the real endpoint in Providers and WebDAV — never the proxy address. Turning the switch off restores direct requests.",

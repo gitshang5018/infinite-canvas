@@ -1,0 +1,90 @@
+name: Desktop Build
+
+# 桌面客户端（Electron）在 GitHub Actions 上构建，产物以 Artifact 形式提供下载。
+on:
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: Platforms to build (comma separated: win, mac, linux)
+        required: false
+        default: win
+  push:
+    tags:
+      - "desktop-v*"
+  pull_request:
+    paths:
+      - "desktop/**"
+      - "web/**"
+      - "canvas-proxy/**"
+      - ".github/workflows/desktop-build.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: win
+            os: windows-latest
+            args: "--win --x64"
+          - platform: mac
+            os: macos-latest
+            args: "--mac"
+          - platform: linux
+            os: ubuntu-latest
+            args: "--linux --x64"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install web dependencies
+        working-directory: web
+        run: bun install
+
+      - name: Type check web
+        working-directory: web
+        run: bun run typecheck
+
+      - name: Build web
+        working-directory: web
+        env:
+          # 桌面端从本机根路径加载页面资源，不使用子路径前缀。
+          VITE_BASE: "/"
+        run: bun run build
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: npm install --no-audit --no-fund
+
+      - name: Package desktop app
+        working-directory: desktop
+        env:
+          # 无签名证书时跳过签名，避免构建流程中断。
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder ${{ matrix.args }} --publish never
+
+      - name: Upload desktop build
+        uses: actions/upload-artifact@v4
+        with:
+          name: infinite-canvas-desktop-${{ matrix.platform }}
+          path: desktop/release/*
+          retention-days: 30
+          if-no-files-found: error

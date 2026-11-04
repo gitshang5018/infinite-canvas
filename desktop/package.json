@@ -1,0 +1,27 @@
+{
+    "name": "infinite-canvas-desktop",
+    "productName": "Infinite Canvas",
+    "version": "0.20.0",
+    "description": "Infinite Canvas desktop client",
+    "author": {
+        "name": "gitshang5018",
+        "email": "shsang5018@gmail.com"
+    },
+    "license": "MIT",
+    "private": true,
+    "main": "main.js",
+    "scripts": {
+        "prepare:app": "node scripts/prepare.mjs",
+        "start": "electron .",
+        "dist": "npm run prepare:app && electron-builder",
+        "dist:win": "npm run prepare:app && electron-builder --win --x64",
+        "dist:mac": "npm run prepare:app && electron-builder --mac",
+        "dist:linux": "npm run prepare:app && electron-builder --linux --x64"
+    },
+    "devDependencies": {
+        "@resvg/resvg-js": "2.6.2",
+        "electron": "45.2.2",
+        "electron-builder": "26.18.0",
+        "esbuild": "0.28.2"
+    }
+}

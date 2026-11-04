@@ -385,6 +385,7 @@ export default {
             title: "本地代理",
             description: "开启后，拉取模型列表、生图、生视频、生成文本、生成音频和 WebDAV 同步等请求都会先发给本机代理再转发出去，用来绕开浏览器跨域限制。",
             startHint: "先在终端运行下面的命令，并在使用画布期间保持运行：",
+            builtinHint: "桌面客户端已内置本地代理，随应用自动启动，无需手动运行命令。",
             address: "代理地址",
             addressDescription: "需要和上面命令启动后打印的地址一致。",
             channelHint: "渠道和 WebDAV 仍填写真实地址，不要填代理地址；关闭开关即可恢复直连。",

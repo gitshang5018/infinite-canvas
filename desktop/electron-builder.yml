@@ -1,0 +1,49 @@
+appId: com.basketikun.infinite-canvas
+productName: Infinite Canvas
+copyright: Copyright © 2026 basketikun
+directories:
+  output: release
+  buildResources: build
+files:
+  - main.js
+  - package.json
+# 前端产物与本地代理放在 asar 之外，主进程按真实目录读取。
+extraResources:
+  - from: resources/web
+    to: web
+  - from: resources/canvas-proxy
+    to: canvas-proxy
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: zip
+      arch:
+        - x64
+  icon: build/icon.png
+  artifactName: InfiniteCanvas-${version}-win-${arch}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: 无限画布
+  deleteAppDataOnUninstall: false
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: build/icon.png
+  category: public.app-category.graphics-design
+  artifactName: InfiniteCanvas-${version}-mac-${arch}.${ext}
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  icon: build/icon.png
+  category: Graphics
+  artifactName: InfiniteCanvas-${version}-linux-${arch}.${ext}

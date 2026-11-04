@@ -15,3 +15,9 @@ web/public/plugins
 plugins/canvas/*/dist
 plugins/canvas/*/node_modules
 web/public/plugins
+
+# 桌面端构建产物
+desktop/node_modules/
+desktop/resources/
+desktop/build/
+desktop/release/

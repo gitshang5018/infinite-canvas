@@ -11,4 +11,8 @@ interface ImportMetaEnv {
     readonly VITE_ANALYTICS_GA4_ID?: string;
     // Baidu Analytics site ID
     readonly VITE_ANALYTICS_BAIDU_ID?: string;
+    // Local proxy address used when the app runs inside the desktop client.
+    readonly VITE_LOCAL_PROXY_URL?: string;
+    // Set to "1" when the app runs inside the desktop client.
+    readonly VITE_DESKTOP?: string;
 }

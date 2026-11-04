@@ -3,6 +3,7 @@ import { Copy, Network, Wifi } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { IS_DESKTOP } from "@/constant/runtime-config";
 import { useCopyText } from "@/hooks/use-copy-text";
 import { testLocalProxy } from "@/services/api/local-proxy";
 import { DEFAULT_LOCAL_PROXY_URL, LOCAL_PROXY_PACKAGE, normalizeLocalProxyUrl, useConfigStore } from "@/stores/use-config-store";
@@ -42,13 +43,17 @@ export function ConfigLocalProxy() {
                 </div>
                 {config.proxyEnabled ? (
                     <>
-                        <div className="mt-3 rounded-md bg-stone-100 px-3 py-2 dark:bg-stone-900">
-                            <div className="mb-1 text-xs text-stone-500">{t("config.proxy.startHint")}</div>
-                            <div className="flex items-center justify-between gap-3">
-                                <code className="min-w-0 truncate text-xs">{command}</code>
-                                <Button size="small" type="text" icon={<Copy className="size-3.5" />} onClick={() => copyText(command)} />
+                        {IS_DESKTOP ? (
+                            <div className="mt-3 rounded-md bg-stone-100 px-3 py-2 text-xs text-stone-500 dark:bg-stone-900">{t("config.proxy.builtinHint")}</div>
+                        ) : (
+                            <div className="mt-3 rounded-md bg-stone-100 px-3 py-2 dark:bg-stone-900">
+                                <div className="mb-1 text-xs text-stone-500">{t("config.proxy.startHint")}</div>
+                                <div className="flex items-center justify-between gap-3">
+                                    <code className="min-w-0 truncate text-xs">{command}</code>
+                                    <Button size="small" type="text" icon={<Copy className="size-3.5" />} onClick={() => copyText(command)} />
+                                </div>
                             </div>
-                        </div>
+                        )}
                         <Form.Item label={t("config.proxy.address")} extra={t("config.proxy.addressDescription")} className="mt-3 mb-0">
                             <Input
                                 value={config.proxyUrl}
