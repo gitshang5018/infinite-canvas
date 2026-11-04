@@ -3,6 +3,17 @@
 declare const __APP_VERSION__: string;
 declare const __APP_RELEASES__: import("@/lib/release").ReleaseInfo[];
 
+interface DesktopWindowApi {
+    platform: NodeJS.Platform;
+    minimize: () => void;
+    toggleMaximize: () => void;
+    close: () => void;
+}
+
+interface Window {
+    desktopWindow?: DesktopWindowApi;
+}
+
 interface ImportMetaEnv {
     // Comma-separated local development plugin URLs, refetched on every startup without caching or persistence.
     readonly VITE_DEV_PLUGINS?: string;

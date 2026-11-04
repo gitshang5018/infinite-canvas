@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { navigationTools, type NavigationToolSlug } from "@/constant/navigation-tools";
+import { DESKTOP_TITLEBAR_HEIGHT } from "@/components/layout/desktop-titlebar";
 import { AppConfigModal } from "@/components/layout/app-config-modal";
 import { MobileNavDrawer } from "@/components/layout/mobile-nav-drawer";
 import { UserStatusActions } from "@/components/layout/user-status-actions";
@@ -35,7 +36,10 @@ export function AppTopNav() {
     return (
         <>
             {!hideHeader ? (
-                <header className="sticky top-0 z-20 h-14 shrink-0 border-b border-stone-200 bg-background/90 backdrop-blur-xl dark:border-stone-800">
+                <header
+                    className="sticky top-0 z-20 h-14 shrink-0 border-b border-stone-200 bg-background/90 backdrop-blur-xl dark:border-stone-800"
+                    style={window.desktopWindow ? { marginTop: DESKTOP_TITLEBAR_HEIGHT, paddingRight: 148 } : undefined}
+                >
                     <div className="mx-auto flex h-full max-w-7xl items-stretch justify-between gap-5 px-6">
                         <div className="flex min-w-0 items-center">
                             <Link to="/" className="flex h-full shrink-0 items-center gap-2 text-sm font-semibold leading-none tracking-tight text-stone-950 transition hover:text-stone-600 dark:text-stone-100 dark:hover:text-stone-300">

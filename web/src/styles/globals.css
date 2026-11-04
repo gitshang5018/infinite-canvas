@@ -135,6 +135,40 @@
     textarea::-webkit-resizer {
         display: none;
     }
+    .desktop-titlebar-drag-region {
+        -webkit-app-region: drag;
+        background: transparent;
+    }
+    .desktop-window-controls {
+        -webkit-app-region: no-drag;
+    }
+    .desktop-window-control {
+        display: grid;
+        width: 46px;
+        height: 36px;
+        place-items: center;
+        color: #a8a29e;
+        transition:
+            color 120ms ease,
+            background-color 120ms ease;
+    }
+    .desktop-window-control:hover {
+        color: #f5f5f4;
+        background: rgb(87 83 78 / 55%);
+    }
+    .desktop-window-control-close:hover {
+        color: white;
+        background: #dc2626;
+    }
+    .desktop-window-control svg {
+        width: 12px;
+        height: 12px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1;
+    }
     html {
         @apply font-sans;
     }

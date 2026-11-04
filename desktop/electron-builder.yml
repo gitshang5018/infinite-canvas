@@ -6,6 +6,7 @@ directories:
   buildResources: build
 files:
   - main.js
+  - preload.js
   - package.json
 # 前端产物与本地代理放在 asar 之外，主进程按真实目录读取。
 extraResources:

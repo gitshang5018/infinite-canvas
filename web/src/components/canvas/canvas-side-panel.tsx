@@ -16,6 +16,7 @@ import { previewUrlFor, subscribeImagePreviews, getImagePreviewRevision, uploadI
 import { useAssetStore, type Asset, type AssetKind } from "@/stores/use-asset-store";
 import { usePromptSourceStore } from "@/stores/use-prompt-source-store";
 import { CANVAS_SIDE_PANEL_MAX_WIDTH, CANVAS_SIDE_PANEL_MIN_WIDTH, CANVAS_SIDE_PANEL_MOTION_MS, useCanvasSidePanelStore } from "@/stores/use-canvas-side-panel-store";
+import { DESKTOP_TITLEBAR_HEIGHT } from "@/components/layout/desktop-titlebar";
 import { useThemeStore } from "@/stores/use-theme-store";
 import { CanvasNodeType, type CanvasNodeData } from "@/types/canvas";
 
@@ -100,7 +101,7 @@ export function CanvasSidePanel({ nodes, selectedNodeIds, onFocusNode, onPreview
                 style={{ width, background: theme.toolbar.panel, borderColor: theme.toolbar.border, color: theme.node.text }}
                 data-canvas-no-zoom
             >
-                <div className="flex items-center gap-5 px-4 pt-3.5">
+                <div className="flex items-center gap-5 px-4 pt-3.5" style={window.desktopWindow ? { marginTop: DESKTOP_TITLEBAR_HEIGHT } : undefined}>
                     <TabButton label={t("canvas.sidePanel.canvas")} active={tab === "canvas"} theme={theme} onClick={() => setTab("canvas")} />
                     <TabButton label={t("canvas.sidePanel.assets")} active={tab === "assets"} theme={theme} onClick={() => setTab("assets")} />
                     <TabButton label={t("canvas.sidePanel.prompts")} active={tab === "prompts"} theme={theme} onClick={() => setTab("prompts")} />

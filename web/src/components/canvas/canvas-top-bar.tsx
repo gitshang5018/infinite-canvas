@@ -8,6 +8,7 @@ import { canvasThemes } from "@/lib/canvas-theme";
 import { useCanvasSidePanelStore } from "@/stores/use-canvas-side-panel-store";
 import { useThemeStore } from "@/stores/use-theme-store";
 import { DOCS_URL } from "@/constant/env";
+import { DESKTOP_TITLEBAR_HEIGHT } from "@/components/layout/desktop-titlebar";
 
 export function CanvasTopBar({
     title,
@@ -73,7 +74,11 @@ export function CanvasTopBar({
 
     return (
         <>
-            <div className="pointer-events-none absolute left-0 right-0 top-0 z-50 flex h-16 items-center justify-between pl-1 pr-4">
+            <div
+                className="pointer-events-none absolute left-0 right-0 top-0 z-50 flex h-16 items-center justify-between pl-1 pr-4"
+                data-desktop-canvas-top-bar
+                style={window.desktopWindow ? { marginTop: DESKTOP_TITLEBAR_HEIGHT, paddingRight: 148 } : undefined}
+            >
                 <div className="pointer-events-auto flex min-w-0 items-center gap-2">
                     <Tooltip title={sidePanelOpen ? t("canvas.collapsePanel") : t("canvas.expandPanel")}>
                         <button
