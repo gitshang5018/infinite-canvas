@@ -3,11 +3,6 @@ name: Desktop Build
 # 桌面客户端（Electron）在 GitHub Actions 上构建，产物以 Artifact 形式提供下载。
 on:
   workflow_dispatch:
-    inputs:
-      platforms:
-        description: Platforms to build (comma separated: win, mac, linux)
-        required: false
-        default: win
   push:
     tags:
       - "desktop-v*"
