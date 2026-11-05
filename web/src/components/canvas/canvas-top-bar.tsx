@@ -9,6 +9,7 @@ import { useCanvasSidePanelStore } from "@/stores/use-canvas-side-panel-store";
 import { useThemeStore } from "@/stores/use-theme-store";
 import { DOCS_URL } from "@/constant/env";
 import { DESKTOP_WINDOW_CONTROLS_WIDTH, DesktopDragHandle } from "@/components/layout/desktop-titlebar";
+import { cn } from "@/lib/utils";
 
 export function CanvasTopBar({
     title,
@@ -75,8 +76,12 @@ export function CanvasTopBar({
     return (
         <>
             <div
-                className="pointer-events-none absolute left-0 right-0 top-0 z-50 flex h-16 items-center justify-between pl-1 pr-4"
+                className={cn(
+                    "pointer-events-none absolute left-0 right-0 top-0 z-50 flex h-16 items-center justify-between pl-1 pr-4",
+                    window.desktopWindow && "desktop-titlebar-drag-region",
+                )}
                 data-desktop-canvas-top-bar
+                data-tauri-drag-region="deep"
                 style={window.desktopWindow && !agentOpen ? { paddingRight: DESKTOP_WINDOW_CONTROLS_WIDTH } : undefined}
             >
                 <div className="pointer-events-auto flex min-w-0 items-center gap-2">

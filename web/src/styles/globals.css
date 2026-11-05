@@ -138,7 +138,23 @@
     .desktop-titlebar-drag-region {
         -webkit-app-region: drag;
     }
-    .desktop-titlebar-drag-region :is(button, a, input, textarea, select, [role="button"], [role="tab"], [role="menuitem"], .ant-select, .ant-picker) {
+    /* 拖动区内的交互元素必须显式豁免，否则会继承 drag 导致点不动。 */
+    .desktop-titlebar-drag-region button,
+    .desktop-titlebar-drag-region a,
+    .desktop-titlebar-drag-region input,
+    .desktop-titlebar-drag-region textarea,
+    .desktop-titlebar-drag-region select,
+    .desktop-titlebar-drag-region [role="button"],
+    .desktop-titlebar-drag-region [role="tab"],
+    .desktop-titlebar-drag-region [role="menuitem"],
+    .desktop-titlebar-drag-region [role="menuitemcheckbox"],
+    .desktop-titlebar-drag-region [role="menuitemradio"],
+    .desktop-titlebar-drag-region .ant-select,
+    .desktop-titlebar-drag-region .ant-picker,
+    .desktop-titlebar-drag-region .ant-dropdown-trigger,
+    .desktop-titlebar-drag-region .ant-tooltip-open,
+    .desktop-titlebar-drag-region .ant-popover,
+    .desktop-titlebar-drag-region label {
         -webkit-app-region: no-drag;
     }
     .desktop-window-controls {
