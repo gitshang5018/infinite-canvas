@@ -6,7 +6,6 @@ use axum::http::{header, HeaderMap, HeaderValue, Method, StatusCode};
 use axum::response::Response;
 use axum::routing::{any, get};
 use axum::Router;
-use percent_encoding::percent_decode_str;
 use tokio::net::TcpListener;
 
 /// 与前端 DEFAULT_LOCAL_PROXY_URL 保持一致。
@@ -93,15 +92,51 @@ fn cors_headers() -> HeaderMap {
     headers
 }
 
+/// decodeURI 不会解码的保留字符，解码时必须原样保留，
+/// 否则会破坏 URL 的路径与查询结构。
+const RESERVED_ESCAPES: &[u8] = b";/?:@&=+$,#";
+
+/// 等价于 JavaScript 的 decodeURI：解码百分号转义，但保留保留字符的转义形式。
+fn decode_uri_like(raw: &str) -> String {
+    let bytes = raw.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'%' && index + 2 < bytes.len() {
+            let hex = &raw[index + 1..index + 3];
+            if let Ok(byte) = u8::from_str_radix(hex, 16) {
+                if !RESERVED_ESCAPES.contains(&byte) {
+                    out.push(byte);
+                    index += 3;
+                    continue;
+                }
+            }
+        }
+        // 非转义字节直接保留，多字节 UTF-8 会被逐字节原样复制。
+        out.push(bytes[index]);
+        index += 1;
+    }
+    String::from_utf8_lossy(&out).to_string()
+}
+
 /// 解析 `/{完整目标地址}` 形式的路径，返回可直接请求的上游地址。
 fn read_target(url: &str) -> Option<String> {
     let raw = url.strip_prefix('/').unwrap_or(url);
     // decodeURI 还原浏览器对路径做的转义，同时保留有意为之的 encodeURIComponent 转义。
-    let decoded = percent_decode_str(raw).decode_utf8_lossy().to_string();
+    let decoded = decode_uri_like(raw);
     // 部分客户端会折叠内嵌目标地址里的 "//"，先补回再校验。
-    let normalized = if let Some(rest) = decoded.strip_prefix("https:/") {
+    // 注意匹配顺序：已带 "//" 的地址要原样保留，只能在缺少斜杠时才补。
+    let normalized = if let Some(rest) = decoded.strip_prefix("https://") {
+        format!("https://{rest}")
+    } else if let Some(rest) = decoded.strip_prefix("http://") {
+        format!("http://{rest}")
+    } else if let Some(rest) = decoded.strip_prefix("https:/") {
         format!("https://{rest}")
     } else if let Some(rest) = decoded.strip_prefix("http:/") {
+        format!("http://{rest}")
+    } else if let Some(rest) = decoded.strip_prefix("https:") {
+        format!("https://{rest}")
+    } else if let Some(rest) = decoded.strip_prefix("http:") {
         format!("http://{rest}")
     } else {
         decoded
@@ -218,6 +253,37 @@ async fn proxy_forward(State(_): State<()>, request: Request) -> Response {
                 StatusCode::BAD_GATEWAY,
                 &serde_json::json!({ "error": error.to_string() }),
             )
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::read_target;
+
+    /// 目标地址解析必须与 Node 版 canvas-proxy 行为一致，
+    /// 否则同一请求在两个容器里会命中不同的上游地址。
+    #[test]
+    fn resolves_target_like_node_version() {
+        let cases = [
+            ("/https://api.example.com/v1/images", Some("https://api.example.com/v1/images")),
+            ("/https://api.example.com/v1/a%20b", Some("https://api.example.com/v1/a b")),
+            // 保留字符的转义形式必须原样保留，避免破坏 URL 结构。
+            ("/https://api.example.com/v1?q=a%2Fb", Some("https://api.example.com/v1?q=a%2Fb")),
+            ("/https://api.example.com/v1?q=a%3Db%26c", Some("https://api.example.com/v1?q=a%3Db%26c")),
+            ("/https://api.example.com/p%2Fpath", Some("https://api.example.com/p%2Fpath")),
+            // 客户端折叠斜杠时仍要还原成完整地址。
+            ("/https:/api.example.com/v1", Some("https://api.example.com/v1")),
+            ("/https:api.example.com/v1", Some("https://api.example.com/v1")),
+            ("/http://api.example.com", Some("http://api.example.com")),
+            // 缺少主机名或不是完整地址时一律拒绝。
+            ("/https://", None),
+            ("/notaurl", None),
+            ("/", None),
+        ];
+
+        for (input, expected) in cases {
+            assert_eq!(read_target(input).as_deref(), expected, "输入: {input}");
         }
     }
 }

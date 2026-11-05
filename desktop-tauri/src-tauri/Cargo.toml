@@ -24,7 +24,6 @@ axum = { version = "0.8", default-features = false, features = ["http1", "tokio"
 http = "1"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
 tokio = { version = "1", features = ["rt-multi-thread", "net", "macros"] }
-percent-encoding = "2"
 
 [profile.release]
 codegen-units = 1

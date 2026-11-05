@@ -91,14 +91,14 @@ jobs:
         if: matrix.platform == 'linux'
         run: |
           sudo apt-get update
+          # libayatana-appindicator3-dev 与 libappindicator3-dev 互斥，只安装前者。
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
+            libayatana-appindicator3-dev \
             librsvg2-dev \
             patchelf \
             libssl-dev \
-            libxdo-dev \
-            libayatana-appindicator3-dev
+            libxdo-dev
 
       # 直接调用 Tauri CLI，只产出本地安装包，不创建 GitHub Release。
       - name: Build Tauri app
