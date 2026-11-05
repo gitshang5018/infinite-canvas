@@ -137,7 +137,9 @@
     }
     .desktop-titlebar-drag-region {
         -webkit-app-region: drag;
-        background: transparent;
+    }
+    .desktop-titlebar-drag-region :is(button, a, input, textarea, select, [role="button"], [role="tab"], [role="menuitem"], .ant-select, .ant-picker) {
+        -webkit-app-region: no-drag;
     }
     .desktop-window-controls {
         -webkit-app-region: no-drag;
