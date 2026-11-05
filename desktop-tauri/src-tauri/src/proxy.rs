@@ -38,33 +38,59 @@ pub fn local_proxy_url() -> String {
     format!("http://{PROXY_HOST}:{PROXY_PORT}")
 }
 
-/// 启动内置代理服务；端口已被占用时视为已有代理在运行，直接跳过。
-pub fn spawn_proxy_server() {
-    let url = local_proxy_url();
+/// 探测本机端口上是否已经是 canvas-proxy。
+///
+/// 端口被同款代理占用时直接复用，被其他程序占用时返回 false，
+/// 此时前端应直连接口而不是把请求发给不相干的服务。
+pub async fn probe_proxy() -> bool {
+    let url = format!("{}/", local_proxy_url());
+    let Ok(response) = reqwest::Client::new().get(&url).timeout(std::time::Duration::from_secs(2)).send().await else {
+        return false;
+    };
+    let Ok(body) = response.text().await else {
+        return false;
+    };
+    body.contains("canvas-proxy")
+}
+
+/// 启动内置代理服务，返回代理是否就绪。
+///
+/// 只有代理真正可用时才把它注入前端配置，否则前端会向不可用的地址发请求。
+pub async fn start_proxy_server() -> bool {
+    let addr: SocketAddr = format!("{PROXY_HOST}:{PROXY_PORT}")
+        .parse()
+        .expect("invalid proxy address");
+
+    let listener = match TcpListener::bind(addr).await {
+        Ok(listener) => listener,
+        Err(error) => {
+            // 端口已占用：可能是同款代理，直接复用；否则放弃内置代理。
+            println!("[proxy] 端口 {PROXY_PORT} 已被占用（{error}），尝试复用已有代理");
+            return probe_proxy().await;
+        }
+    };
+
+    let app = Router::new()
+        .route("/", get(proxy_info))
+        .fallback(any(proxy_forward))
+        .with_state(());
+
+    println!("[proxy] 内置本地代理已启动：{}", local_proxy_url());
     tauri::async_runtime::spawn(async move {
-        let addr: SocketAddr = format!("{PROXY_HOST}:{PROXY_PORT}")
-            .parse()
-            .expect("invalid proxy address");
-
-        let listener = match TcpListener::bind(addr).await {
-            Ok(listener) => listener,
-            Err(error) => {
-                // 端口已占用通常意味着本机已经运行了代理，此时直接复用即可。
-                println!("[proxy] 端口 {PROXY_PORT} 不可用（{error}），跳过内置代理启动");
-                return;
-            }
-        };
-
-        let app = Router::new()
-            .route("/", get(proxy_info))
-            .fallback(any(proxy_forward))
-            .with_state(());
-
-        println!("[proxy] 内置本地代理已启动：{url}");
         if let Err(error) = axum::serve(listener, app).await {
             eprintln!("[proxy] 代理服务异常退出：{error}");
         }
     });
+
+    // 等待服务真正可响应后再通知前端。
+    for _ in 0..25 {
+        if probe_proxy().await {
+            return true;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    }
+    println!("[proxy] 本地代理未就绪，前端将直连接口");
+    false
 }
 
 fn cors_headers() -> HeaderMap {
@@ -328,6 +354,48 @@ mod tests {
             }
         });
         format!("http://{addr}")
+    }
+
+    /// 图片生成走 POST 且带 JSON body 与查询参数，
+    /// 代理必须完整转发方法、查询串与请求体。
+    #[tokio::test]
+    async fn forwards_post_with_query_and_body() {
+        let upstream = spawn_upstream().await;
+        // 代理约定路径形如 /{完整目标地址}，查询串跟在其后。
+        let target = format!("/{upstream}/v1/images/generations?size=1024x1024&n=1");
+
+        let request = Request::builder()
+            .method("POST")
+            .uri(&target)
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"model":"gpt-image-1","prompt":"a cat"}"#))
+            .expect("build request");
+
+        let response = proxy_forward(axum::extract::State(()), request).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), 1024 * 1024).await.expect("read body");
+        let text = String::from_utf8_lossy(&body).to_string();
+        // 上游回显的 path 必须包含原始查询串。
+        assert!(text.contains("/v1/images/generations?size=1024x1024&n=1"), "查询串丢失: {text}");
+    }
+
+    /// 带查询串的请求解析出的目标地址必须完整包含查询参数。
+    #[test]
+    fn keeps_query_string_in_target() {
+        let cases = [
+            (
+                "/https://api.example.com/v1/images/generations?size=1024x1024&n=1",
+                Some("https://api.example.com/v1/images/generations?size=1024x1024&n=1"),
+            ),
+            (
+                "/https://api.example.com/v1/images?a=b%26c=d",
+                Some("https://api.example.com/v1/images?a=b%26c=d"),
+            ),
+        ];
+        for (input, expected) in cases {
+            assert_eq!(read_target(input).as_deref(), expected, "输入: {input}");
+        }
     }
 
     /// 代理必须把请求原样转发到上游，并带上宽松的 CORS 响应头。
