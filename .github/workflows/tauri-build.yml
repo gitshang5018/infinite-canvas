@@ -41,6 +41,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # 本地代理的单元与集成测试。在前端构建之前运行，
+      # 此时只需占位文件满足编译期对 frontendDist 的校验，测试结束即删除。
+      - name: Test Tauri proxy
+        working-directory: desktop-tauri/src-tauri
+        run: |
+          mkdir -p ../../web/dist
+          echo '<!doctype html><title>test</title>' > ../../web/dist/index.html
+          cargo test --lib
+          rm -rf ../../web/dist
+
+      - name: Cache Rust build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop-tauri/src-tauri/target
+          key: tauri-cargo-${{ matrix.platform }}-${{ hashFiles('desktop-tauri/src-tauri/Cargo.lock') }}
+          restore-keys: tauri-cargo-${{ matrix.platform }}-
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
@@ -71,21 +96,6 @@ jobs:
       - name: Generate icons
         working-directory: desktop-tauri
         run: npm run icons
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Cache Rust build
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            desktop-tauri/src-tauri/target
-          key: tauri-cargo-${{ matrix.platform }}-${{ hashFiles('desktop-tauri/src-tauri/Cargo.lock') }}
-          restore-keys: tauri-cargo-${{ matrix.platform }}-
 
       - name: Install Linux system dependencies
         if: matrix.platform == 'linux'
