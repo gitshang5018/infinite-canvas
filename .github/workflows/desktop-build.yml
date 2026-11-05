@@ -77,7 +77,6 @@ jobs:
         env:
           # 无签名证书时跳过签名，避免构建流程中断。
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder ${{ matrix.args }} --publish never
 
       - name: Upload desktop build
