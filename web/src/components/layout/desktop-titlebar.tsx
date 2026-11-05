@@ -2,9 +2,16 @@ import { createPortal } from "react-dom";
 
 export const DESKTOP_WINDOW_CONTROLS_WIDTH = 148;
 
+/**
+ * 顶行空白处的窗口拖动手柄。
+ *
+ * Electron 用 `-webkit-app-region: drag`（CSS 继承语义，后代可交互元素自动豁免），
+ * Tauri 用 `data-tauri-drag-region="deep"`（子树语义，可交互元素同样自动阻断），
+ * 两者行为一致，因此同一个元素可以同时服务两个容器。
+ */
 export function DesktopDragHandle({ className }: { className?: string }) {
     if (!window.desktopWindow) return null;
-    return <div aria-hidden className={`desktop-titlebar-drag-region pointer-events-auto min-w-0 flex-1 ${className ?? ""}`} />;
+    return <div aria-hidden data-tauri-drag-region="deep" className={`desktop-titlebar-drag-region pointer-events-auto min-w-0 flex-1 ${className ?? ""}`} />;
 }
 
 export function DesktopTitlebar() {

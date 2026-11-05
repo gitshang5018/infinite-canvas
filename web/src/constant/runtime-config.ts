@@ -10,6 +10,7 @@ type RuntimeConfig = {
     ANALYTICS_BAIDU_ID?: string; // Baidu Analytics site ID
     LOCAL_PROXY_URL?: string; // Local proxy address, injected by the desktop client
     DESKTOP?: string; // Set by the desktop client to mark the desktop runtime
+    DESKTOP_PLATFORM?: string; // Operating system reported by the desktop client
 };
 
 declare global {

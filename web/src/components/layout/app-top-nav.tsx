@@ -37,6 +37,7 @@ export function AppTopNav() {
         <>
             {!hideHeader ? (
                 <header
+                    data-tauri-drag-region="deep"
                     className={cn(
                         "sticky top-0 z-20 h-14 shrink-0 border-b border-stone-200 bg-background/90 backdrop-blur-xl dark:border-stone-800",
                         window.desktopWindow && "desktop-titlebar-drag-region",

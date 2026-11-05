@@ -1,0 +1,117 @@
+name: Tauri Desktop Build
+
+# 桌面客户端（Tauri）在 GitHub Actions 上构建，产物以 Artifact 形式提供下载。
+# 与 Electron 版本（desktop-build.yml）并行维护，便于对比体积与稳定性。
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "desktop-tauri/**"
+      - "web/**"
+      - ".github/workflows/tauri-build.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tauri-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: win
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundles: nsis
+          - platform: mac
+            os: macos-latest
+            target: aarch64-apple-darwin
+            bundles: dmg
+          - platform: linux
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            bundles: deb
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install web dependencies
+        working-directory: web
+        run: bun install --frozen-lockfile
+
+      - name: Type check web
+        working-directory: web
+        run: bun run typecheck
+
+      - name: Build web
+        working-directory: web
+        env:
+          # 桌面端从根路径加载页面资源，不使用子路径前缀。
+          VITE_BASE: "/"
+        run: bun run build
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Tauri CLI dependencies
+        working-directory: desktop-tauri
+        run: npm install --no-audit --no-fund
+
+      - name: Generate icons
+        working-directory: desktop-tauri
+        run: npm run icons
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop-tauri/src-tauri/target
+          key: tauri-cargo-${{ matrix.platform }}-${{ hashFiles('desktop-tauri/src-tauri/Cargo.lock') }}
+          restore-keys: tauri-cargo-${{ matrix.platform }}-
+
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libxdo-dev \
+            libayatana-appindicator3-dev
+
+      # 直接调用 Tauri CLI，只产出本地安装包，不创建 GitHub Release。
+      - name: Build Tauri app
+        working-directory: desktop-tauri
+        env:
+          # 没有签名证书时跳过签名，避免构建流程中断。
+          TAURI_SIGNING_PRIVATE_KEY: ""
+        run: npx tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --no-sign
+
+      - name: Upload Tauri build
+        uses: actions/upload-artifact@v4
+        with:
+          name: infinite-canvas-tauri-${{ matrix.platform }}
+          path: desktop-tauri/src-tauri/target/${{ matrix.target }}/release/bundle/
+          retention-days: 30
+          if-no-files-found: error

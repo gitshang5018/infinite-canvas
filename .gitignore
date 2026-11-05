@@ -21,3 +21,10 @@ desktop/node_modules/
 desktop/resources/
 desktop/build/
 desktop/release/
+
+# Tauri 桌面端构建产物
+desktop-tauri/node_modules/
+desktop-tauri/src-tauri/target/
+desktop-tauri/src-tauri/gen/schemas/
+desktop-tauri/src-tauri/icons/android/
+desktop-tauri/src-tauri/icons/ios/
