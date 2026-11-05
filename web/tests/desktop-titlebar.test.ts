@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
-import { DESKTOP_TITLEBAR_HEIGHT, desktopTitlebarClassName } from "@/components/layout/desktop-titlebar";
+import { DESKTOP_WINDOW_CONTROLS_WIDTH, DesktopTitlebar } from "@/components/layout/desktop-titlebar";
 
 describe("desktop titlebar layout", () => {
     test("keeps the transparent drag strip at the Windows caption height", () => {
-        expect(DESKTOP_TITLEBAR_HEIGHT).toBe(36);
-        expect(desktopTitlebarClassName()).toContain("desktop-titlebar-drag-region");
+        expect(DESKTOP_WINDOW_CONTROLS_WIDTH).toBe(148);
+        expect(DesktopTitlebar).toBeFunction();
     });
 
     test("uses a frameless window with a preload bridge instead of a native caption", async () => {

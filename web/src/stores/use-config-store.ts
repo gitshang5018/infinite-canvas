@@ -3,7 +3,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { nanoid } from "nanoid";
 
-import { LOCAL_PROXY_URL } from "@/constant/runtime-config";
+import { EFFECTIVE_LOCAL_PROXY_URL } from "@/constant/runtime-config";
 import i18n from "@/i18n";
 
 export type ApiCallFormat = "openai" | "gemini";
@@ -80,7 +80,7 @@ const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com";
 export const LOCAL_PROXY_PACKAGE = "@basketikun/canvas-proxy";
 export const DEFAULT_LOCAL_PROXY_URL = "http://127.0.0.1:23210";
 // The desktop client injects the address of the local proxy it starts, so the proxy is on by default there.
-export const RUNTIME_LOCAL_PROXY_URL = LOCAL_PROXY_URL;
+export const RUNTIME_LOCAL_PROXY_URL = EFFECTIVE_LOCAL_PROXY_URL;
 
 export const defaultConfig: AiConfig = {
     channelMode: "local",
@@ -215,6 +215,44 @@ function isAiConfigReady(config: AiConfig, model: string) {
     return Boolean(match && match.channel.baseUrl.trim() && match.channel.apiKey.trim());
 }
 
+export function mergePersistedConfig(current: AiConfig, persistedState: { config?: Partial<AiConfig>; webdav?: Partial<WebdavSyncConfig> }, runtimeProxyUrl = EFFECTIVE_LOCAL_PROXY_URL): { config: AiConfig; webdav: WebdavSyncConfig } {
+    const persistedConfig = persistedState.config || {};
+    const persistedWebdav = persistedState.webdav || {};
+    const config = { ...defaultConfig, ...current, ...persistedConfig };
+    if (!Array.isArray(persistedConfig.channels)) config.channels = [];
+    const channels = normalizeChannels(config);
+    const models = modelOptionsFromChannels(channels);
+    return {
+        config: {
+            ...config,
+            channelMode: "local" as const,
+            apiFormat: normalizeApiFormat(config.apiFormat),
+            channels,
+            models,
+            imageModel: normalizeModelOptionValue(config.imageModel || config.model, channels),
+            videoModel: normalizeModelOptionValue(config.videoModel, channels),
+            textModel: normalizeModelOptionValue(config.textModel || config.model, channels),
+            audioModel: normalizeModelOptionValue(config.audioModel || defaultConfig.audioModel, channels),
+            audioVoice: config.audioVoice || defaultConfig.audioVoice,
+            audioFormat: config.audioFormat || defaultConfig.audioFormat,
+            audioSpeed: config.audioSpeed || defaultConfig.audioSpeed,
+            audioInstructions: config.audioInstructions || "",
+            reasoningEffort: config.reasoningEffort || defaultConfig.reasoningEffort,
+            videoSeconds: config.videoSeconds || "6",
+            vquality: config.vquality || "720",
+            videoGenerateAudio: config.videoGenerateAudio || "true",
+            videoWatermark: config.videoWatermark || "false",
+            videoMode: config.videoMode === "reference" ? "reference" : "frames",
+            canvasImageCount: config.canvasImageCount || "3",
+            proxyEnabled: runtimeProxyUrl ? true : Boolean(config.proxyEnabled),
+            proxyUrl: runtimeProxyUrl || config.proxyUrl || DEFAULT_LOCAL_PROXY_URL,
+            nodeRegenerateBehavior: config.nodeRegenerateBehavior === "overwrite" ? ("overwrite" as const) : ("new-node" as const),
+            autoFocusOnSelect: Boolean(config.autoFocusOnSelect),
+        },
+        webdav: { ...defaultWebdavSyncConfig, ...persistedWebdav },
+    };
+}
+
 export const useConfigStore = create<ConfigStore>()(
     persist(
         (set, get) => ({
@@ -253,41 +291,10 @@ export const useConfigStore = create<ConfigStore>()(
             partialize: (state) => ({ config: state.config, webdav: state.webdav }),
             merge: (persisted, current) => {
                 const persistedState = (persisted || {}) as Partial<ConfigStore>;
-                const persistedConfig = (persistedState.config || {}) as Partial<AiConfig>;
-                const persistedWebdav = (persistedState.webdav || {}) as Partial<WebdavSyncConfig>;
-                const config = { ...defaultConfig, ...persistedConfig };
-                if (!Array.isArray(persistedConfig.channels)) config.channels = [];
-                const channels = normalizeChannels(config);
-                const models = modelOptionsFromChannels(channels);
+                const merged = mergePersistedConfig(current.config, persistedState, EFFECTIVE_LOCAL_PROXY_URL);
                 return {
                     ...current,
-                    webdav: { ...defaultWebdavSyncConfig, ...persistedWebdav },
-                    config: {
-                        ...config,
-                        channelMode: "local",
-                        apiFormat: normalizeApiFormat(config.apiFormat),
-                        channels,
-                        models,
-                        imageModel: normalizeModelOptionValue(config.imageModel || config.model, channels),
-                        videoModel: normalizeModelOptionValue(config.videoModel, channels),
-                        textModel: normalizeModelOptionValue(config.textModel || config.model, channels),
-                        audioModel: normalizeModelOptionValue(config.audioModel || defaultConfig.audioModel, channels),
-                        audioVoice: config.audioVoice || defaultConfig.audioVoice,
-                        audioFormat: config.audioFormat || defaultConfig.audioFormat,
-                        audioSpeed: config.audioSpeed || defaultConfig.audioSpeed,
-                        audioInstructions: config.audioInstructions || "",
-                        reasoningEffort: config.reasoningEffort || "auto",
-                        videoSeconds: config.videoSeconds || "6",
-                        vquality: config.vquality || "720",
-                        videoGenerateAudio: config.videoGenerateAudio || "true",
-                        videoWatermark: config.videoWatermark || "false",
-                        videoMode: config.videoMode === "reference" ? "reference" : "frames",
-                        canvasImageCount: config.canvasImageCount || "3",
-                        proxyEnabled: Boolean(config.proxyEnabled),
-                        proxyUrl: config.proxyUrl || DEFAULT_LOCAL_PROXY_URL,
-                        nodeRegenerateBehavior: config.nodeRegenerateBehavior === "overwrite" ? "overwrite" : "new-node",
-                        autoFocusOnSelect: Boolean(config.autoFocusOnSelect),
-                    },
+                    ...merged,
                 };
             },
         },
