@@ -259,7 +259,12 @@ async fn proxy_forward(State(_): State<()>, request: Request) -> Response {
 
 #[cfg(test)]
 mod tests {
-    use super::read_target;
+    use super::{proxy_forward, read_target};
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use futures_util::StreamExt;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
 
     /// 目标地址解析必须与 Node 版 canvas-proxy 行为一致，
     /// 否则同一请求在两个容器里会命中不同的上游地址。
@@ -285,5 +290,137 @@ mod tests {
         for (input, expected) in cases {
             assert_eq!(read_target(input).as_deref(), expected, "输入: {input}");
         }
+    }
+
+    /// 启动一个最小上游服务器，用于验证代理的真实转发行为。
+    async fn spawn_upstream() -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind upstream");
+        let addr = listener.local_addr().expect("upstream addr");
+        tokio::spawn(async move {
+            loop {
+                let Ok((mut socket, _)) = listener.accept().await else { break };
+                tokio::spawn(async move {
+                    let mut buffer = vec![0u8; 4096];
+                    let read = socket.read(&mut buffer).await.unwrap_or(0);
+                    let request = String::from_utf8_lossy(&buffer[..read]).to_string();
+                    let mut lines = request.lines();
+                    let first = lines.next().unwrap_or_default();
+                    let path = first.split_whitespace().nth(1).unwrap_or_default().to_string();
+
+                    if path.ends_with("/sse") {
+                        let head = "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n";
+                        socket.write_all(head.as_bytes()).await.ok();
+                        socket.write_all(b"data: one\n\n").await.ok();
+                        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                        socket.write_all(b"data: two\n\n").await.ok();
+                        socket.shutdown().await.ok();
+                    } else {
+                        let body = format!("{{\"path\":\"{path}\"}}");
+                        let head = format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nX-Upstream: yes\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                            body.len()
+                        );
+                        socket.write_all(head.as_bytes()).await.ok();
+                        socket.write_all(body.as_bytes()).await.ok();
+                        socket.shutdown().await.ok();
+                    }
+                });
+            }
+        });
+        format!("http://{addr}")
+    }
+
+    /// 代理必须把请求原样转发到上游，并带上宽松的 CORS 响应头。
+    #[tokio::test]
+    async fn forwards_request_to_upstream_with_cors() {
+        let upstream = spawn_upstream().await;
+        // 代理约定路径形如 /{完整目标地址}。
+        let target = format!("/{upstream}/v1/models");
+
+        let request = Request::builder()
+            .method("GET")
+            .uri(&target)
+            .body(Body::empty())
+            .expect("build request");
+
+        let response = proxy_forward(axum::extract::State(()), request).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response
+                .headers()
+                .get("access-control-allow-origin")
+                .and_then(|value| value.to_str().ok()),
+            Some("*")
+        );
+        assert_eq!(
+            response.headers().get("x-upstream").and_then(|value| value.to_str().ok()),
+            Some("yes")
+        );
+
+        let body = axum::body::to_bytes(response.into_body(), 1024 * 1024).await.expect("read body");
+        let text = String::from_utf8_lossy(&body).to_string();
+        assert!(text.contains("/v1/models"), "上游收到的路径不正确: {text}");
+    }
+
+    /// SSE 响应必须逐块流式返回，不能等上游结束才整体吐出。
+    #[tokio::test]
+    async fn streams_sse_response() {
+        let upstream = spawn_upstream().await;
+        // 代理约定路径形如 /{完整目标地址}。
+        let target = format!("/{upstream}/sse");
+
+        let request = Request::builder()
+            .method("GET")
+            .uri(&target)
+            .body(Body::empty())
+            .expect("build request");
+
+        let response = proxy_forward(axum::extract::State(()), request).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let mut stream = response.into_body().into_data_stream();
+        let mut collected = String::new();
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk.expect("stream chunk");
+            collected.push_str(&String::from_utf8_lossy(&chunk));
+        }
+        assert!(collected.contains("data: one"), "缺少首个 SSE 分块: {collected}");
+        assert!(collected.contains("data: two"), "缺少第二个 SSE 分块: {collected}");
+    }
+
+    /// CORS 预检请求必须直接返回 204 与允许头。
+    #[tokio::test]
+    async fn answers_preflight_request() {
+        let request = Request::builder()
+            .method("OPTIONS")
+            .uri("/https://api.example.com/v1")
+            .body(Body::empty())
+            .expect("build request");
+
+        let response = proxy_forward(axum::extract::State(()), request).await;
+        assert_eq!(response.status(), StatusCode::NO_CONTENT);
+        assert_eq!(
+            response
+                .headers()
+                .get("access-control-allow-methods")
+                .and_then(|value| value.to_str().ok()),
+            Some("*")
+        );
+    }
+
+    /// 顶层路径返回代理自述信息，方便用户确认代理已启动。
+    #[tokio::test]
+    async fn describes_itself_on_root_path() {
+        let request = Request::builder()
+            .method("GET")
+            .uri("/")
+            .body(Body::empty())
+            .expect("build request");
+
+        let response = proxy_forward(axum::extract::State(()), request).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), 1024 * 1024).await.expect("read body");
+        let text = String::from_utf8_lossy(&body).to_string();
+        assert!(text.contains("infinite-canvas"), "缺少代理标识: {text}");
     }
 }
