@@ -30,5 +30,7 @@ futures-util = "0.3"
 codegen-units = 1
 lto = true
 opt-level = "s"
-panic = "abort"
+# Keep unwinding enabled: Tauri/Wry's Windows WebView2 teardown path relies on
+# normal Rust stack unwinding. `panic = "abort"` turns that path into
+# STATUS_STACK_BUFFER_OVERRUN (0xc0000409) and crashes the release app.
 strip = true

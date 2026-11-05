@@ -4,8 +4,16 @@ name: Desktop Build
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
+      - fix/desktop-ci-build
     tags:
       - "desktop-v*"
+    paths:
+      - "desktop/**"
+      - "web/**"
+      - "canvas-proxy/**"
+      - ".github/workflows/desktop-build.yml"
   pull_request:
     paths:
       - "desktop/**"
@@ -14,7 +22,7 @@ on:
       - ".github/workflows/desktop-build.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: desktop-build-${{ github.ref }}
@@ -86,3 +94,53 @@ jobs:
           path: desktop/release/*
           retention-days: 30
           if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/fix/desktop-ci-build')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download desktop builds
+        uses: actions/download-artifact@v4
+        with:
+          pattern: infinite-canvas-desktop-*
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./desktop/package.json').version")"
+          tag="electron-desktop-v${version}-${GITHUB_SHA::8}"
+          title="Infinite Canvas Electron ${version} (${GITHUB_SHA::8})"
+          body=$(cat <<EOF
+          ## Infinite Canvas Electron ${version}
+
+          Electron 桌面客户端构建产物。
+
+          - Commit: \`${GITHUB_SHA}\`
+          - Windows: NSIS 安装包与 ZIP
+          - macOS: DMG 安装包（Intel / Apple Silicon）
+          - Linux: AppImage
+          EOF
+          )
+
+          files=()
+          while IFS= read -r -d '' file; do
+            files+=("$file")
+          done < <(find release-artifacts -type f -print0)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No release artifacts found" >&2
+            exit 1
+          fi
+
+          gh release create "$tag" \
+            --title "$title" \
+            --notes "$body" \
+            --target "$GITHUB_SHA" \
+            "${files[@]}"
