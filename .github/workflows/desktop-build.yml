@@ -103,18 +103,18 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout version metadata
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout: desktop/package.json
+          sparse-checkout-cone-mode: false
+
       - name: Download desktop builds
         uses: actions/download-artifact@v4
         with:
           pattern: infinite-canvas-desktop-*
           path: release-artifacts
           merge-multiple: true
-
-      - name: Checkout version metadata
-        uses: actions/checkout@v5
-        with:
-          sparse-checkout: desktop/package.json
-          sparse-checkout-cone-mode: false
 
       - name: Publish release
         env:
