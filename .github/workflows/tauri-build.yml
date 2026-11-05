@@ -46,6 +46,11 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       # 本地代理的单元与集成测试。在前端构建之前运行，
       # 此时只需占位文件满足编译期对 frontendDist 的校验，测试结束即删除。
       - name: Test Tauri proxy
@@ -54,7 +59,7 @@ jobs:
           mkdir -p ../../web/dist
           echo '<!doctype html><title>test</title>' > ../../web/dist/index.html
           cargo test --lib
-          rm -rf ../../web/dist
+          node -e "require('node:fs').rmSync('../../web/dist', { recursive: true, force: true })"
 
       - name: Cache Rust build
         uses: actions/cache@v4
@@ -83,11 +88,6 @@ jobs:
           # 桌面端从根路径加载页面资源，不使用子路径前缀。
           VITE_BASE: "/"
         run: bun run build
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
 
       - name: Install Tauri CLI dependencies
         working-directory: desktop-tauri
