@@ -51,6 +51,20 @@ jobs:
         with:
           node-version: 22
 
+      # Linux 编译 Tauri 需要 GTK 等系统库，必须在测试与打包之前安装。
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          # libayatana-appindicator3-dev 与 libappindicator3-dev 互斥，只安装前者。
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libxdo-dev
+
       # 本地代理的单元与集成测试。在前端构建之前运行，
       # 此时只需占位文件满足编译期对 frontendDist 的校验，测试结束即删除。
       - name: Test Tauri proxy
@@ -96,19 +110,6 @@ jobs:
       - name: Generate icons
         working-directory: desktop-tauri
         run: npm run icons
-
-      - name: Install Linux system dependencies
-        if: matrix.platform == 'linux'
-        run: |
-          sudo apt-get update
-          # libayatana-appindicator3-dev 与 libappindicator3-dev 互斥，只安装前者。
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            libssl-dev \
-            libxdo-dev
 
       # 直接调用 Tauri CLI，只产出本地安装包，不创建 GitHub Release。
       - name: Build Tauri app
