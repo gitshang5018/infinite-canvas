@@ -4,8 +4,16 @@ name: Desktop Build
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
+      - fix/desktop-ci-build
     tags:
       - "desktop-v*"
+    paths:
+      - "desktop/**"
+      - "web/**"
+      - "canvas-proxy/**"
+      - ".github/workflows/desktop-build.yml"
   pull_request:
     paths:
       - "desktop/**"
@@ -14,7 +22,7 @@ on:
       - ".github/workflows/desktop-build.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: desktop-build-${{ github.ref }}
@@ -33,20 +41,20 @@ jobs:
             args: "--win --x64"
           - platform: mac
             os: macos-latest
-            args: "--mac"
+            args: "--mac --x64 --arm64"
           - platform: linux
             os: ubuntu-latest
             args: "--linux --x64"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
       - name: Install web dependencies
         working-directory: web
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Type check web
         working-directory: web
@@ -66,20 +74,87 @@ jobs:
 
       - name: Install desktop dependencies
         working-directory: desktop
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
+
+      - name: Prepare desktop resources
+        working-directory: desktop
+        run: npm run prepare:app
 
       - name: Package desktop app
         working-directory: desktop
         env:
           # 无签名证书时跳过签名，避免构建流程中断。
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder ${{ matrix.args }} --publish never
+
+      # Electron 的 macOS 包内含大量同名许可证文件；发布时只保留顶层安装包与 ZIP。
+      - name: Collect desktop installers
+        working-directory: desktop/release
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/desktop-installer"
+          find . -maxdepth 1 -type f \( -name '*.exe' -o -name '*.msi' -o -name '*.zip' -o -name '*.dmg' -o -name '*.AppImage' \) -exec cp -n {} "$RUNNER_TEMP/desktop-installer/" \;
 
       - name: Upload desktop build
         uses: actions/upload-artifact@v4
         with:
           name: infinite-canvas-desktop-${{ matrix.platform }}
-          path: desktop/release/*
+          path: ${{ runner.temp }}/desktop-installer/
           retention-days: 30
           if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/fix/desktop-ci-build')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout version metadata
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout: desktop/package.json
+          sparse-checkout-cone-mode: false
+
+      - name: Download desktop builds
+        uses: actions/download-artifact@v4
+        with:
+          pattern: infinite-canvas-desktop-*
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./desktop/package.json').version")"
+          tag="electron-desktop-v${version}-${GITHUB_SHA::8}"
+          title="Infinite Canvas Electron ${version} (${GITHUB_SHA::8})"
+          body=$(cat <<EOF
+          ## Infinite Canvas Electron ${version}
+
+          Electron 桌面客户端构建产物。
+
+          - Commit: \`${GITHUB_SHA}\`
+          - Windows: NSIS 安装包与 ZIP
+          - macOS: DMG 安装包（Intel / Apple Silicon）
+          - Linux: AppImage
+          EOF
+          )
+
+          files=()
+          while IFS= read -r -d '' file; do
+            files+=("$file")
+          done < <(find release-artifacts -type f -print0)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No release artifacts found" >&2
+            exit 1
+          fi
+
+          gh release create "$tag" \
+            --title "$title" \
+            --notes "$body" \
+            --target "$GITHUB_SHA" \
+            "${files[@]}"

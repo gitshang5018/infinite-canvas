@@ -1,0 +1,203 @@
+name: Tauri Desktop Build
+
+# 桌面客户端（Tauri）在 GitHub Actions 上构建。
+# 推送到发布分支时，产物会自动发布到 GitHub Releases；
+# 其他分支仍只生成 Artifact，便于 PR 验证。
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - fix/desktop-ci-build
+    paths:
+      - "desktop-tauri/**"
+      - "web/**"
+      - "package.json"
+      - ".github/workflows/tauri-build.yml"
+  pull_request:
+    paths:
+      - "desktop-tauri/**"
+      - "web/**"
+      - "package.json"
+      - ".github/workflows/tauri-build.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tauri-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: win
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundles: nsis
+          - platform: mac
+            os: macos-latest
+            target: aarch64-apple-darwin
+            bundles: dmg
+          - platform: linux
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            bundles: deb
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Linux 编译 Tauri 需要 GTK 等系统库，必须在测试与打包之前安装。
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          # libayatana-appindicator3-dev 与 libappindicator3-dev 互斥，只安装前者。
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libxdo-dev
+
+      # 本地代理的单元与集成测试。在前端构建之前运行，
+      # 此时只需占位文件满足编译期对 frontendDist 的校验，测试结束即删除。
+      - name: Test Tauri proxy
+        working-directory: desktop-tauri/src-tauri
+        run: |
+          mkdir -p ../../web/dist
+          echo '<!doctype html><title>test</title>' > ../../web/dist/index.html
+          cargo test --lib
+          node -e "require('node:fs').rmSync('../../web/dist', { recursive: true, force: true })"
+
+      - name: Cache Rust build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop-tauri/src-tauri/target
+          key: tauri-cargo-${{ matrix.platform }}-${{ hashFiles('desktop-tauri/src-tauri/Cargo.lock') }}
+          restore-keys: tauri-cargo-${{ matrix.platform }}-
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install web dependencies
+        working-directory: web
+        run: bun install --frozen-lockfile
+
+      - name: Type check web
+        working-directory: web
+        run: bun run typecheck
+
+      - name: Build web
+        working-directory: web
+        env:
+          # 桌面端从根路径加载页面资源，不使用子路径前缀。
+          VITE_BASE: "/"
+        run: bun run build
+
+      - name: Install Tauri CLI dependencies
+        working-directory: desktop-tauri
+        run: npm install --no-audit --no-fund
+
+      - name: Generate icons
+        working-directory: desktop-tauri
+        run: npm run icons
+
+      # 直接调用 Tauri CLI，只产出本地安装包，不创建 GitHub Release。
+      - name: Build Tauri app
+        working-directory: desktop-tauri
+        env:
+          # 没有签名证书时跳过签名，避免构建流程中断。
+          TAURI_SIGNING_PRIVATE_KEY: ""
+        run: npx tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --no-sign
+
+      # 安装包已经包含完整应用，只需发布顶层安装文件，不能把 licenses 等内部文件一起上传。
+      - name: Collect Tauri installers
+        working-directory: desktop-tauri/src-tauri/target/${{ matrix.target }}/release/bundle
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/tauri-installer"
+          find . -maxdepth 2 -type f \( -name '*.exe' -o -name '*.msi' -o -name '*.dmg' -o -name '*.deb' -o -name '*.AppImage' \) -exec cp -n {} "$RUNNER_TEMP/tauri-installer/" \;
+
+      - name: Upload Tauri build
+        uses: actions/upload-artifact@v4
+        with:
+          name: infinite-canvas-tauri-${{ matrix.platform }}
+          path: ${{ runner.temp }}/tauri-installer/
+          retention-days: 30
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/fix/desktop-ci-build')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout version metadata
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout: desktop-tauri/package.json
+          sparse-checkout-cone-mode: false
+
+      - name: Download Tauri builds
+        uses: actions/download-artifact@v4
+        with:
+          pattern: infinite-canvas-tauri-*
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./desktop-tauri/package.json').version")"
+          tag="desktop-v${version}-${GITHUB_SHA::8}"
+          title="Infinite Canvas ${version} (${GITHUB_SHA::8})"
+          body=$(cat <<EOF
+          ## Infinite Canvas ${version}
+
+          Tauri 桌面客户端构建产物。
+
+          - Commit: \`${GITHUB_SHA}\`
+          - Windows: NSIS 安装包
+          - macOS: DMG 安装包（Apple Silicon）
+          - Linux: DEB 安装包
+          EOF
+          )
+
+          files=()
+          while IFS= read -r -d '' file; do
+            files+=("$file")
+          done < <(find release-artifacts -type f -print0)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No release artifacts found" >&2
+            exit 1
+          fi
+
+          gh release create "$tag" \
+            --title "$title" \
+            --notes "$body" \
+            --target "$GITHUB_SHA" \
+            "${files[@]}"

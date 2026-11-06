@@ -17,6 +17,7 @@ import { useAssetStore, type Asset, type AssetKind } from "@/stores/use-asset-st
 import { usePromptSourceStore } from "@/stores/use-prompt-source-store";
 import { CANVAS_SIDE_PANEL_MAX_WIDTH, CANVAS_SIDE_PANEL_MIN_WIDTH, CANVAS_SIDE_PANEL_MOTION_MS, useCanvasSidePanelStore } from "@/stores/use-canvas-side-panel-store";
 import { useThemeStore } from "@/stores/use-theme-store";
+import { DesktopDragHandle } from "@/components/layout/desktop-titlebar";
 import { CanvasNodeType, type CanvasNodeData } from "@/types/canvas";
 
 import type { InsertAssetPayload } from "./asset-picker-modal";
@@ -104,6 +105,7 @@ export function CanvasSidePanel({ nodes, selectedNodeIds, onFocusNode, onPreview
                     <TabButton label={t("canvas.sidePanel.canvas")} active={tab === "canvas"} theme={theme} onClick={() => setTab("canvas")} />
                     <TabButton label={t("canvas.sidePanel.assets")} active={tab === "assets"} theme={theme} onClick={() => setTab("assets")} />
                     <TabButton label={t("canvas.sidePanel.prompts")} active={tab === "prompts"} theme={theme} onClick={() => setTab("prompts")} />
+                    <DesktopDragHandle />
                 </div>
                 <div className="mt-2 min-h-0 flex-1 overflow-hidden">
                     {tab === "canvas" ? (
