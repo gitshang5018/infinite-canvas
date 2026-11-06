@@ -34,17 +34,32 @@ type StoredImagePreview = { version: number; blob?: Blob };
 
 type ImageReadOptions = { signal?: AbortSignal };
 
+export function dataUrlToBlob(dataUrl: string): Blob {
+    const [header, content] = dataUrl.split(",", 2);
+    const mimeType = header?.match(/^data:([^;]+)/)?.[1] || "image/png";
+    const binary = atob(content || "");
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return new Blob([bytes], { type: mimeType });
+}
+
 export async function uploadImage(input: string | Blob, options?: ImageReadOptions): Promise<UploadedImage> {
     if (typeof input !== "string") return storeImage(input, options);
 
     let blob: Blob;
-    try {
-        blob = await fetchImageBlob(input, options);
-    } catch (error) {
-        if (options?.signal?.aborted || isNamedError(error, IMAGE_RESPONSE_ERROR) || isNamedError(error, IMAGE_TIMEOUT_ERROR) || !/^https?:\/\//i.test(input)) throw error;
-        const meta = await loadImageMeta(input, options, IMAGE_REMOTE_LOAD_TIMEOUT_MS);
-        if (!meta) throw error;
-        return { url: input, width: meta.width, height: meta.height, bytes: 0, mimeType: "" };
+    if (input.startsWith("data:")) {
+        blob = dataUrlToBlob(input);
+    } else {
+        try {
+            blob = await fetchImageBlob(input, options);
+        } catch (error) {
+            if (options?.signal?.aborted || isNamedError(error, IMAGE_RESPONSE_ERROR) || isNamedError(error, IMAGE_TIMEOUT_ERROR) || !/^https?:\/\//i.test(input)) throw error;
+            const meta = await loadImageMeta(input, options, IMAGE_REMOTE_LOAD_TIMEOUT_MS);
+            if (!meta) throw error;
+            return { url: input, width: meta.width, height: meta.height, bytes: 0, mimeType: "" };
+        }
     }
     return storeImage(blob, options);
 }
@@ -223,7 +238,12 @@ export async function setImageBlob(storageKey: string, blob: Blob) {
 }
 
 export async function imageToDataUrl(image: { url?: string; dataUrl?: string; storageKey?: string }, options?: ImageReadOptions) {
-    const url = image.dataUrl || (await resolveImageUrl(image.storageKey, image.url || ""));
+    if (image.dataUrl) return image.dataUrl;
+    if (image.storageKey) {
+        const blob = await getImageBlob(image.storageKey);
+        if (blob) return blobToDataUrl(blob);
+    }
+    const url = await resolveImageUrl(image.storageKey, image.url || "");
     if (!url || url.startsWith("data:")) return url;
     return blobToDataUrl(await fetchImageBlob(url, options));
 }

@@ -20,15 +20,26 @@ const { defaultConfig, mergePersistedConfig } = await import("../src/stores/use-
 
 const runtimeProxyUrl = "http://127.0.0.1:23210";
 
-test("desktop runtime proxy overrides a persisted disabled proxy setting", () => {
+test("desktop runtime proxy keeps an explicit disabled proxy setting for direct connections", () => {
     const merged = mergePersistedConfig(
         defaultConfig,
         { config: { proxyEnabled: false, proxyUrl: runtimeProxyUrl } },
         runtimeProxyUrl,
     );
 
-    expect(merged.config.proxyEnabled).toBe(true);
+    expect(merged.config.proxyEnabled).toBe(false);
     expect(merged.config.proxyUrl).toBe("http://127.0.0.1:23210");
+});
+
+test("desktop runtime proxy defaults to enabled when no preference is persisted", () => {
+    const merged = mergePersistedConfig(
+        defaultConfig,
+        {},
+        runtimeProxyUrl,
+    );
+
+    expect(merged.config.proxyEnabled).toBe(true);
+    expect(merged.config.proxyUrl).toBe(runtimeProxyUrl);
 });
 
 test("desktop runtime proxy overrides a persisted stale proxy address", () => {
@@ -42,7 +53,7 @@ test("desktop runtime proxy overrides a persisted stale proxy address", () => {
     expect(merged.config.proxyUrl).toBe(runtimeProxyUrl);
 });
 
-test("desktop runtime proxy override keeps persisted provider credentials", () => {
+test("desktop runtime proxy keeps persisted provider credentials and proxy preference", () => {
     const merged = mergePersistedConfig(
         defaultConfig,
         { config: { apiKey: "persisted-key", proxyEnabled: false, proxyUrl: runtimeProxyUrl } },
@@ -50,7 +61,7 @@ test("desktop runtime proxy override keeps persisted provider credentials", () =
     );
 
     expect(merged.config.apiKey).toBe("persisted-key");
-    expect(merged.config.proxyEnabled).toBe(true);
+    expect(merged.config.proxyEnabled).toBe(false);
     expect(merged.config.proxyUrl).toBe(runtimeProxyUrl);
 });
 

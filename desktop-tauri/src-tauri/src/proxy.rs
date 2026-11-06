@@ -44,7 +44,10 @@ pub fn local_proxy_url() -> String {
 /// 此时前端应直连接口而不是把请求发给不相干的服务。
 pub async fn probe_proxy() -> bool {
     let url = format!("{}/", local_proxy_url());
-    let Ok(response) = reqwest::Client::new().get(&url).timeout(std::time::Duration::from_secs(2)).send().await else {
+    let Ok(client) = reqwest::Client::builder().no_proxy().build() else {
+        return false;
+    };
+    let Ok(response) = client.get(&url).timeout(std::time::Duration::from_secs(2)).send().await else {
         return false;
     };
     let Ok(body) = response.text().await else {

@@ -244,7 +244,7 @@ export function mergePersistedConfig(current: AiConfig, persistedState: { config
             videoWatermark: config.videoWatermark || "false",
             videoMode: config.videoMode === "reference" ? "reference" : "frames",
             canvasImageCount: config.canvasImageCount || "3",
-            proxyEnabled: runtimeProxyUrl ? true : Boolean(config.proxyEnabled),
+            proxyEnabled: persistedConfig.proxyEnabled !== undefined ? Boolean(config.proxyEnabled) : Boolean(runtimeProxyUrl || config.proxyEnabled),
             proxyUrl: runtimeProxyUrl || config.proxyUrl || DEFAULT_LOCAL_PROXY_URL,
             nodeRegenerateBehavior: config.nodeRegenerateBehavior === "overwrite" ? ("overwrite" as const) : ("new-node" as const),
             autoFocusOnSelect: Boolean(config.autoFocusOnSelect),
