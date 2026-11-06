@@ -14,12 +14,6 @@ on:
       - "web/**"
       - "package.json"
       - ".github/workflows/tauri-build.yml"
-  pull_request:
-    paths:
-      - "desktop-tauri/**"
-      - "web/**"
-      - "package.json"
-      - ".github/workflows/tauri-build.yml"
 
 permissions:
   contents: write
@@ -40,14 +34,6 @@ jobs:
             os: windows-latest
             target: x86_64-pc-windows-msvc
             bundles: nsis
-          - platform: mac
-            os: macos-latest
-            target: aarch64-apple-darwin
-            bundles: dmg
-          - platform: linux
-            os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-            bundles: deb
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -182,8 +168,6 @@ jobs:
 
           - Commit: \`${GITHUB_SHA}\`
           - Windows: NSIS 安装包
-          - macOS: DMG 安装包（Apple Silicon）
-          - Linux: DEB 安装包
           EOF
           )
 

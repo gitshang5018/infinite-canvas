@@ -14,12 +14,6 @@ on:
       - "web/**"
       - "canvas-proxy/**"
       - ".github/workflows/desktop-build.yml"
-  pull_request:
-    paths:
-      - "desktop/**"
-      - "web/**"
-      - "canvas-proxy/**"
-      - ".github/workflows/desktop-build.yml"
 
 permissions:
   contents: write
@@ -39,12 +33,6 @@ jobs:
           - platform: win
             os: windows-latest
             args: "--win --x64"
-          - platform: mac
-            os: macos-latest
-            args: "--mac --x64 --arm64"
-          - platform: linux
-            os: ubuntu-latest
-            args: "--linux --x64"
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -139,8 +127,6 @@ jobs:
 
           - Commit: \`${GITHUB_SHA}\`
           - Windows: NSIS 安装包与 ZIP
-          - macOS: DMG 安装包（Intel / Apple Silicon）
-          - Linux: AppImage
           EOF
           )
 
