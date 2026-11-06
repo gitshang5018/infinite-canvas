@@ -52,9 +52,21 @@ export function readImageMeta(dataUrl: string) {
 }
 
 export function dataUrlToFile(image: ReferenceImage) {
-    const [header, content] = image.dataUrl.split(",", 2);
+    const dataUrl = image.dataUrl || "";
+    const commaIndex = dataUrl.indexOf(",");
+    if (commaIndex === -1) {
+        throw new Error(i18n.t("common.imageReadFailed"));
+    }
+    const header = dataUrl.slice(0, commaIndex);
+    const content = dataUrl.slice(commaIndex + 1);
+    if (!content) {
+        throw new Error(i18n.t("common.imageReadFailed"));
+    }
     const mimeType = header.match(/data:(.*?);base64/)?.[1] || image.type || "image/png";
-    const binary = atob(content || "");
+    const binary = atob(content);
+    if (binary.length === 0) {
+        throw new Error(i18n.t("common.imageReadFailed"));
+    }
     const bytes = new Uint8Array(binary.length);
     for (let index = 0; index < binary.length; index += 1) {
         bytes[index] = binary.charCodeAt(index);

@@ -4,6 +4,8 @@ import { nanoid } from "nanoid";
 import i18n from "@/i18n";
 import { withLocalProxy } from "@/stores/use-config-store";
 import { createImageThumbnail } from "@/lib/image-thumbnail";
+import { dataUrlToFile } from "@/lib/image-utils";
+import type { ReferenceImage } from "@/types/image";
 
 export type UploadedImage = {
     url: string;
@@ -238,14 +240,25 @@ export async function setImageBlob(storageKey: string, blob: Blob) {
 }
 
 export async function imageToDataUrl(image: { url?: string; dataUrl?: string; storageKey?: string }, options?: ImageReadOptions) {
-    if (image.dataUrl) return image.dataUrl;
+    if (image.dataUrl?.startsWith("data:")) return image.dataUrl;
     if (image.storageKey) {
         const blob = await getImageBlob(image.storageKey);
         if (blob) return blobToDataUrl(blob);
     }
-    const url = await resolveImageUrl(image.storageKey, image.url || "");
+    const url = (image.dataUrl && !image.dataUrl.startsWith("data:") ? image.dataUrl : "") || (await resolveImageUrl(image.storageKey, image.url || ""));
     if (!url || url.startsWith("data:")) return url;
     return blobToDataUrl(await fetchImageBlob(url, options));
+}
+
+export async function referenceImageToFile(image: ReferenceImage): Promise<File> {
+    if (image.storageKey) {
+        const blob = await getImageBlob(image.storageKey);
+        if (blob && blob.size > 0) {
+            return new File([blob], image.name || "reference.png", { type: blob.type || image.type || "image/png" });
+        }
+    }
+    const dataUrl = await imageToDataUrl(image);
+    return dataUrlToFile({ ...image, dataUrl });
 }
 
 export async function deleteStoredImages(keys: Iterable<string>) {
