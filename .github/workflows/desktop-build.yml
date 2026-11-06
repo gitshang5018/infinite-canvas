@@ -87,11 +87,19 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: npx electron-builder ${{ matrix.args }} --publish never
 
+      # Electron 的 macOS 包内含大量同名许可证文件；发布时只保留顶层安装包与 ZIP。
+      - name: Collect desktop installers
+        working-directory: desktop/release
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/desktop-installer"
+          find . -maxdepth 1 -type f \( -name '*.exe' -o -name '*.msi' -o -name '*.zip' -o -name '*.dmg' -o -name '*.AppImage' \) -exec cp -n {} "$RUNNER_TEMP/desktop-installer/" \;
+
       - name: Upload desktop build
         uses: actions/upload-artifact@v4
         with:
           name: infinite-canvas-desktop-${{ matrix.platform }}
-          path: desktop/release/*
+          path: ${{ runner.temp }}/desktop-installer/
           retention-days: 30
           if-no-files-found: error
 

@@ -130,11 +130,19 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ""
         run: npx tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --no-sign
 
+      # 安装包已经包含完整应用，只需发布顶层安装文件，不能把 licenses 等内部文件一起上传。
+      - name: Collect Tauri installers
+        working-directory: desktop-tauri/src-tauri/target/${{ matrix.target }}/release/bundle
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/tauri-installer"
+          find . -maxdepth 2 -type f \( -name '*.exe' -o -name '*.msi' -o -name '*.dmg' -o -name '*.deb' -o -name '*.AppImage' \) -exec cp -n {} "$RUNNER_TEMP/tauri-installer/" \;
+
       - name: Upload Tauri build
         uses: actions/upload-artifact@v4
         with:
           name: infinite-canvas-tauri-${{ matrix.platform }}
-          path: desktop-tauri/src-tauri/target/${{ matrix.target }}/release/bundle/
+          path: ${{ runner.temp }}/tauri-installer/
           retention-days: 30
           if-no-files-found: error
 
