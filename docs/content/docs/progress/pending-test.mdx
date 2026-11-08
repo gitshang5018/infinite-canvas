@@ -5,6 +5,8 @@ description: Implemented changes that still need manual verification
 
 # Pending Tests
 
+- Desktop client installer icon and localization: The desktop installer must use the official Infinite Canvas logo icon instead of the default framework icon. The Windows NSIS installer wizard should present in Simplified Chinese by default without unnecessary language prompts, and the generated desktop shortcut and Start Menu entry must be named "无限画布".
+
 The current release needs manual verification in these areas:
 
 - React 19 Portal re-renders & Route Error Boundary: Modals (version updates, app settings), Drawers (mobile navigation, channel editor), and the Home gallery Image.PreviewGroup should mount cleanly without triggering React Error #185 (Maximum update depth exceeded). When an unexpected exception occurs within routes, the app should render a graceful error boundary fallback screen with Reload and Go Home actions instead of the unstyled default error screen.

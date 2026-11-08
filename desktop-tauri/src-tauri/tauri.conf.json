@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "InfiniteCanvas",
+  "productName": "无限画布",
   "version": "0.20.0",
   "identifier": "com.basketikun.infinitecanvas",
   "build": {
@@ -42,6 +42,18 @@
     ],
     "category": "Graphics and Design",
     "shortDescription": "无限画布",
-    "longDescription": "无限画布桌面客户端"
+    "longDescription": "无限画布桌面客户端",
+    "windows": {
+      "wix": {
+        "language": "zh-CN"
+      },
+      "nsis": {
+        "languages": [
+          "SimpChinese",
+          "English"
+        ],
+        "displayLanguageSelector": false
+      }
+    }
   }
 }
