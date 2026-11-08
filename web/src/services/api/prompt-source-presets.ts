@@ -9,8 +9,30 @@ export type PromptSource = {
     builtIn: boolean;
 };
 
+export const GITHUB_PROXY_PREFIX = "https://github.adc.dpdns.org/";
+
+export function toProxiedGithubUrl(url: string): string {
+    if (!url) return "";
+    const trimmed = url.trim();
+    if (trimmed.startsWith(GITHUB_PROXY_PREFIX)) return trimmed;
+    try {
+        const parsed = new URL(trimmed);
+        if (
+            parsed.hostname === "raw.githubusercontent.com" ||
+            parsed.hostname === "github.com" ||
+            parsed.hostname === "avatars.githubusercontent.com" ||
+            parsed.hostname.endsWith(".githubusercontent.com")
+        ) {
+            return `${GITHUB_PROXY_PREFIX}${trimmed}`;
+        }
+    } catch {
+        // invalid URL, ignore
+    }
+    return trimmed;
+}
+
 export const PROMPT_REGISTRY_HOMEPAGE = "https://github.com/yukkcat/image-prompts";
-export const PROMPT_REGISTRY_SOURCE_BASE = "https://github.adc.dpdns.org/https://raw.githubusercontent.com/yukkcat/image-prompts/main/dist/sources";
+export const PROMPT_REGISTRY_SOURCE_BASE = `${GITHUB_PROXY_PREFIX}https://raw.githubusercontent.com/yukkcat/image-prompts/main/dist/sources`;
 
 export function createPromptSource(source?: Partial<PromptSource>): PromptSource {
     return {
@@ -31,8 +53,30 @@ export const DEFAULT_PROMPT_SOURCES: PromptSource[] = [
     registrySource("awesome-gpt4o-image-prompts", "Awesome GPT-4o", "https://github.com/ImgEdify/Awesome-GPT4o-Image-Prompts"),
     registrySource("youmind-gpt-image-2", "YouMind GPT Image 2", "https://github.com/YouMind-OpenLab/awesome-gpt-image-2"),
     registrySource("youmind-nano-banana-pro", "YouMind Nano Banana Pro", "https://github.com/YouMind-OpenLab/awesome-nano-banana-pro-prompts"),
+    githubRawSource(
+        "apimodels-gpt-image-2",
+        "ApiModels GPT Image 2",
+        "https://raw.githubusercontent.com/apimodels/gpt-image-2-prompts/master/prompts.json",
+        "https://github.com/apimodels/gpt-image-2-prompts",
+    ),
+    githubRawSource(
+        "songguoxs-gpt4o-prompts",
+        "Songguo GPT-4o Prompts",
+        "https://raw.githubusercontent.com/songguoxs/gpt4o-image-prompts/master/data/prompts.json",
+        "https://github.com/songguoxs/gpt4o-image-prompts",
+    ),
+    githubRawSource(
+        "stretchcloud-gpt-image-2-5",
+        "StretchCloud GPT Image 2.5",
+        "https://raw.githubusercontent.com/stretchcloud/awesome-gpt-image-prompt-2.5/main/data/prompts.json",
+        "https://github.com/stretchcloud/awesome-gpt-image-prompt-2.5",
+    ),
 ];
 
 function registrySource(id: string, name: string, homepage: string): PromptSource {
     return { id, name, url: `${PROMPT_REGISTRY_SOURCE_BASE}/${id}.json`, homepage, enabled: true, builtIn: true };
+}
+
+function githubRawSource(id: string, name: string, rawUrl: string, homepage: string): PromptSource {
+    return { id, name, url: toProxiedGithubUrl(rawUrl), homepage, enabled: true, builtIn: true };
 }

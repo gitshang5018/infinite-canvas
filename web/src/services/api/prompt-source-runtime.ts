@@ -1,5 +1,5 @@
 import i18n from "@/i18n";
-import type { PromptSource } from "./prompt-source-presets";
+import { toProxiedGithubUrl, type PromptSource } from "./prompt-source-presets";
 
 export type RawPrompt = {
     id: string;
@@ -23,7 +23,8 @@ export type RawPrompt = {
 type RunOptions = { signal?: AbortSignal };
 
 async function fetchSource(source: PromptSource, options?: RunOptions) {
-    const response = await fetch(source.url, { cache: "no-store", signal: options?.signal });
+    const fetchUrl = toProxiedGithubUrl(source.url);
+    const response = await fetch(fetchUrl, { cache: "no-store", signal: options?.signal });
     if (!response.ok) throw new Error(i18n.t("config.promptSources.runtime.requestFailed", { status: response.status }));
     return response.json();
 }
@@ -44,8 +45,19 @@ export async function runPromptSource(source: PromptSource, options?: RunOptions
 }
 
 function parseJsonSource(data: unknown, source: PromptSource) {
-    if (!Array.isArray(data)) throw new Error(i18n.t("config.promptSources.runtime.invalidRoot", { name: source.name }));
-    return normalizeItems(data, source);
+    let list: unknown[];
+    if (Array.isArray(data)) {
+        list = data;
+    } else if (data && typeof data === "object") {
+        const obj = data as Record<string, unknown>;
+        if (Array.isArray(obj.items)) list = obj.items;
+        else if (Array.isArray(obj.prompts)) list = obj.prompts;
+        else if (Array.isArray(obj.data)) list = obj.data;
+        else throw new Error(i18n.t("config.promptSources.runtime.invalidRoot", { name: source.name }));
+    } else {
+        throw new Error(i18n.t("config.promptSources.runtime.invalidRoot", { name: source.name }));
+    }
+    return normalizeItems(list, source);
 }
 
 function normalizeItems(values: unknown[], source: PromptSource) {
@@ -53,30 +65,59 @@ function normalizeItems(values: unknown[], source: PromptSource) {
     const items: RawPrompt[] = [];
     values.forEach((value, index) => {
         const record = asRecord(value);
-        const title = stringValue(record.title).trim();
-        const prompt = stringValue(record.prompt).trim();
+        const title = (
+            stringValue(record.title) ||
+            stringValue(record.name_zh) ||
+            stringValue(record.name) ||
+            stringValue(record.name_en)
+        ).trim();
+
+        let prompt = stringValue(record.prompt).trim();
+        if (!prompt && (record.prompt_zh || record.prompt_en)) {
+            prompt = (stringValue(record.prompt_zh) || stringValue(record.prompt_en)).trim();
+        }
+        if (!prompt && Array.isArray(record.prompts)) {
+            const arr = stringArray(record.prompts);
+            prompt = (arr[1] || arr[0] || "").trim();
+        }
+        if (!prompt && (record.instruction || record.text)) {
+            prompt = (stringValue(record.instruction) || stringValue(record.text)).trim();
+        }
+
         if (!title || !prompt) return;
-        const id = stringValue(record.id).trim() || `${source.id}-${leftPad(index + 1)}`;
+        const id = stringValue(record.id).trim() || (record.n ? `${source.id}-${record.n}` : `${source.id}-${leftPad(index + 1)}`);
         if (seen.has(id)) return;
         seen.add(id);
-        const referenceImageUrls = stringArray(record.referenceImageUrls).map((url) => absoluteUrl(source.url, url));
-        const coverUrl = absoluteUrl(source.url, stringValue(record.coverUrl)) || referenceImageUrls[0] || "";
+
+        const rawRefImages = stringArray(record.referenceImageUrls || record.images);
+        const referenceImageUrls = rawRefImages.map((url) => resolveItemUrl(source.url, url));
+        const rawCover = stringValue(record.coverUrl) || stringValue(record.image) || stringValue(record.coverImage) || (record.file ? `images/${stringValue(record.file)}` : "");
+        const coverUrl = rawCover ? resolveItemUrl(source.url, rawCover) : referenceImageUrls[0] || "";
+
+        const tags = stringArray(record.tags);
+        const category = stringValue(record.categoryLabel) || stringValue(record.category);
+        if (category && !tags.includes(category)) tags.push(category);
+
+        const sourceObj = asRecord(record.source);
+        const author = stringValue(record.author) || stringValue(sourceObj.name);
+        const sourceUrl = resolveItemUrl(source.url, stringValue(record.sourceUrl) || stringValue(sourceObj.url));
+
         items.push({
             id,
             title,
             prompt,
-            description: stringValue(record.description),
+            description: stringValue(record.description) || stringValue(record.summary) || stringValue(record.tagline),
             coverUrl,
             referenceImageUrls,
-            tags: stringArray(record.tags),
+            tags,
             preview: stringValue(record.preview),
             createdAt: stringValue(record.createdAt),
             updatedAt: stringValue(record.updatedAt),
-            author: stringValue(record.author),
-            sourceUrl: absoluteUrl(source.url, stringValue(record.sourceUrl)),
+            author,
+            sourceUrl,
             imageMode: optionalString(record.imageMode),
-            imageModel: optionalString(record.imageModel),
-            imageSize: optionalString(record.imageSize),
+            imageModel: optionalString(record.imageModel) || optionalString(record.model),
+            imageSize: optionalString(record.imageSize) || optionalString(record.aspect_ratio),
             imageCount: optionalNumber(record.imageCount),
         });
     });
@@ -105,12 +146,13 @@ function optionalNumber(value: unknown) {
     return Number.isFinite(result) && result > 0 ? result : undefined;
 }
 
-function absoluteUrl(baseUrl: string, path: string) {
+function resolveItemUrl(baseUrl: string, path: string) {
     if (!path) return "";
     try {
-        return new URL(path, baseUrl).toString();
+        const resolved = new URL(path, baseUrl).toString();
+        return toProxiedGithubUrl(resolved);
     } catch {
-        return path;
+        return toProxiedGithubUrl(path);
     }
 }
 
