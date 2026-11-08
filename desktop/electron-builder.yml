@@ -25,7 +25,7 @@ win:
       arch:
         - x64
   icon: build/icon.png
-  artifactName: InfiniteCanvas-${version}-win-${arch}.${ext}
+  artifactName: 无限画布-${version}-win-${arch}.${ext}
 nsis:
   oneClick: false
   perMachine: false
@@ -44,7 +44,7 @@ mac:
         - arm64
   icon: build/icon.png
   category: public.app-category.graphics-design
-  artifactName: InfiniteCanvas-${version}-mac-${arch}.${ext}
+  artifactName: 无限画布-${version}-mac-${arch}.${ext}
 linux:
   target:
     - target: AppImage
@@ -52,4 +52,4 @@ linux:
         - x64
   icon: build/icon.png
   category: Graphics
-  artifactName: InfiniteCanvas-${version}-linux-${arch}.${ext}
+  artifactName: 无限画布-${version}-linux-${arch}.${ext}

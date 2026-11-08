@@ -68,6 +68,14 @@ jobs:
         working-directory: desktop
         run: npm run prepare:app
 
+      # 清理旧构建残留，避免收集到旧版本安装包。
+      - name: Clean stale desktop release
+        shell: pwsh
+        run: |
+          if (Test-Path "desktop/release") {
+            Remove-Item -Path "desktop/release" -Recurse -Force
+          }
+
       - name: Package desktop app
         working-directory: desktop
         env:
@@ -76,12 +84,14 @@ jobs:
         run: npx electron-builder ${{ matrix.args }} --publish never
 
       # Electron 的 macOS 包内含大量同名许可证文件；发布时只保留顶层安装包与 ZIP。
+      # 使用 pwsh 收集，保证中文文件名完整保留。
       - name: Collect desktop installers
         working-directory: desktop/release
-        shell: bash
+        shell: pwsh
         run: |
-          mkdir -p "$RUNNER_TEMP/desktop-installer"
-          find . -maxdepth 1 -type f \( -name '*.exe' -o -name '*.msi' -o -name '*.zip' -o -name '*.dmg' -o -name '*.AppImage' \) -exec cp -n {} "$RUNNER_TEMP/desktop-installer/" \;
+          $dest = Join-Path $env:RUNNER_TEMP "desktop-installer"
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          Get-ChildItem -Path . -File | Where-Object { $_.Extension -match '^\.(exe|msi|zip|dmg|AppImage)$' } | Copy-Item -Destination $dest
 
       - name: Upload desktop build
         uses: actions/upload-artifact@v4

@@ -176,7 +176,9 @@ function createStaticServer(root) {
 }
 
 function createWindow() {
+    const iconPath = path.join(__dirname, "build", "icon.png");
     mainWindow = new BrowserWindow({
+        icon: fs.existsSync(iconPath) ? iconPath : undefined,
         width: 1440,
         height: 900,
         minWidth: 960,

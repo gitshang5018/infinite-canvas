@@ -82,6 +82,15 @@ jobs:
           key: tauri-cargo-${{ matrix.platform }}-${{ hashFiles('desktop-tauri/src-tauri/Cargo.lock') }}
           restore-keys: tauri-cargo-${{ matrix.platform }}-
 
+      - name: Cache Tauri tools
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\AppData\Local\tauri
+            ~/.cache/tauri
+          key: tauri-tools-${{ matrix.platform }}-${{ hashFiles('desktop-tauri/package.json') }}
+          restore-keys: tauri-tools-${{ matrix.platform }}-
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
@@ -108,6 +117,15 @@ jobs:
         working-directory: desktop-tauri
         run: npm run icons
 
+      # 清理旧缓存带来的旧版本安装包，确保只收集本次构建的新版本产物。
+      - name: Clean stale bundle artifacts
+        shell: pwsh
+        run: |
+          $bundleDir = "desktop-tauri/src-tauri/target/${{ matrix.target }}/release/bundle"
+          if (Test-Path $bundleDir) {
+            Remove-Item -Path $bundleDir -Recurse -Force
+          }
+
       # 直接调用 Tauri CLI，只产出本地安装包，不创建 GitHub Release。
       - name: Build Tauri app
         working-directory: desktop-tauri
@@ -117,12 +135,14 @@ jobs:
         run: npx tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --no-sign
 
       # 安装包已经包含完整应用，只需发布顶层安装文件，不能把 licenses 等内部文件一起上传。
+      # 使用 pwsh 复制，避免在 Windows Git Bash 下因编码问题丢失中文文件名。
       - name: Collect Tauri installers
         working-directory: desktop-tauri/src-tauri/target/${{ matrix.target }}/release/bundle
-        shell: bash
+        shell: pwsh
         run: |
-          mkdir -p "$RUNNER_TEMP/tauri-installer"
-          find . -maxdepth 2 -type f \( -name '*.exe' -o -name '*.msi' -o -name '*.dmg' -o -name '*.deb' -o -name '*.AppImage' \) -exec cp -n {} "$RUNNER_TEMP/tauri-installer/" \;
+          $dest = Join-Path $env:RUNNER_TEMP "tauri-installer"
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          Get-ChildItem -Path . -Recurse -File | Where-Object { $_.Extension -match '^\.(exe|msi|dmg|deb|AppImage)$' } | Copy-Item -Destination $dest
 
       - name: Upload Tauri build
         uses: actions/upload-artifact@v4
