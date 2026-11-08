@@ -1,5 +1,5 @@
 import i18n from "@/i18n";
-import { toProxiedGithubUrl, type PromptSource } from "./prompt-source-presets";
+import { toProxiedGithubUrl, toProxiedImageUrl, type PromptSource } from "./prompt-source-presets";
 
 export type RawPrompt = {
     id: string;
@@ -148,11 +148,15 @@ function optionalNumber(value: unknown) {
 
 function resolveItemUrl(baseUrl: string, path: string) {
     if (!path) return "";
+    let effectivePath = path;
+    if (baseUrl.includes("songguoxs/gpt4o-image-prompts") && effectivePath.startsWith("images/")) {
+        effectivePath = `../${effectivePath}`;
+    }
     try {
-        const resolved = new URL(path, baseUrl).toString();
-        return toProxiedGithubUrl(resolved);
+        const resolved = new URL(effectivePath, baseUrl).toString();
+        return toProxiedImageUrl(resolved);
     } catch {
-        return toProxiedGithubUrl(path);
+        return toProxiedImageUrl(effectivePath);
     }
 }
 

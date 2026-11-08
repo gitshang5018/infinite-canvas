@@ -10,6 +10,7 @@ export type PromptSource = {
 };
 
 export const GITHUB_PROXY_PREFIX = "https://github.adc.dpdns.org/";
+export const IMAGE_PROXY_PREFIX = "https://wsrv.nl/?url=";
 
 export function toProxiedGithubUrl(url: string): string {
     if (!url) return "";
@@ -24,6 +25,34 @@ export function toProxiedGithubUrl(url: string): string {
             parsed.hostname.endsWith(".githubusercontent.com")
         ) {
             return `${GITHUB_PROXY_PREFIX}${trimmed}`;
+        }
+    } catch {
+        // invalid URL, ignore
+    }
+    return trimmed;
+}
+
+export function toProxiedImageUrl(url: string): string {
+    if (!url) return "";
+    let trimmed = url.trim();
+    if (trimmed.includes("songguoxs/gpt4o-image-prompts") && trimmed.includes("/data/images/")) {
+        trimmed = trimmed.replace("/data/images/", "/images/");
+    }
+    if (trimmed.startsWith(GITHUB_PROXY_PREFIX) || trimmed.startsWith(IMAGE_PROXY_PREFIX)) {
+        return trimmed;
+    }
+    try {
+        const parsed = new URL(trimmed);
+        if (
+            parsed.hostname === "raw.githubusercontent.com" ||
+            parsed.hostname === "github.com" ||
+            parsed.hostname === "avatars.githubusercontent.com" ||
+            parsed.hostname.endsWith(".githubusercontent.com")
+        ) {
+            return `${GITHUB_PROXY_PREFIX}${trimmed}`;
+        }
+        if (parsed.hostname.endsWith("youmind.com")) {
+            return `${IMAGE_PROXY_PREFIX}${encodeURIComponent(trimmed)}`;
         }
     } catch {
         // invalid URL, ignore

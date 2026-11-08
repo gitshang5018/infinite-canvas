@@ -11,6 +11,7 @@ import { getNodeDefinition } from "@/lib/canvas/node-registry";
 import { cn } from "@/lib/utils";
 import { PromptDetailDialog } from "@/pages/prompts/components/prompt-detail-dialog";
 import { fetchSourcePrompts, type Prompt } from "@/services/api/prompts";
+import { toProxiedImageUrl } from "@/services/api/prompt-source-presets";
 import { uploadMediaFile } from "@/services/file-storage";
 import { previewUrlFor, subscribeImagePreviews, getImagePreviewRevision, uploadImage } from "@/services/image-storage";
 import { useAssetStore, type Asset, type AssetKind } from "@/stores/use-asset-store";
@@ -664,7 +665,7 @@ function PromptRow({ item, theme, onInsert, onView }: { item: Prompt; theme: Can
     return (
         <div className="group relative flex items-center gap-2.5 rounded-lg px-2 py-2 transition hover:bg-black/5 dark:hover:bg-white/5">
             {item.coverUrl ? (
-                <img src={item.coverUrl} alt="" className="size-10 shrink-0 rounded-md object-cover" loading="lazy" />
+                <img src={toProxiedImageUrl(item.coverUrl)} alt="" referrerPolicy="no-referrer" className="size-10 shrink-0 rounded-md object-cover" loading="lazy" />
             ) : (
                 <span className="grid size-10 shrink-0 place-items-center rounded-md" style={{ background: theme.node.panel }}>
                     <FileText className="size-4 opacity-50" />

@@ -11,6 +11,7 @@
 + [修复] 桌面客户端保留用户关闭代理的直连设置，并在 CSP 中放行本地图片协议与优化 Base64 存图，解决生图时提示 Failed to fetch 的问题。
 + [修复] 修复带参考图生图及视频生成时直接读取本地 Blob 构建表单文件并纠正 Data URL 转换，解决提交空文件提示 image file is empty 的问题。
 + [修复] 修复 Tauri 桌面客户端 Release 版本在 Windows 启动时因异常中止策略触发 `0xc0000409` 崩溃的问题。
++ [修复] 修复提示词库中 YouMind 资源由于 Cloudflare 节点受限及防盗链导致图片无法显示的问题，并修正松果 GPT-4o 相对路径解析，全面增加图像 CDN 反代与 no-referrer 策略。
 + [新增] 扩充内置提示词库预设（新增 ApiModels GPT Image 2、松果 GPT-4o 以及 StretchCloud GPT Image 2.5 词库），且提示词库源及 GitHub 图片资源全面支持通过反代地址流畅加载。
 + [优化] 内置提示词库改用 GitHub 反代地址加载，降低跨域及网络访问失败的影响。
 + [优化] 桌面客户端在 GitHub Actions 编译成功后自动发布 Windows、macOS 和 Linux 安装包到 Releases。

@@ -3,9 +3,11 @@ import { expect, test } from "bun:test";
 import {
     DEFAULT_PROMPT_SOURCES,
     GITHUB_PROXY_PREFIX,
+    IMAGE_PROXY_PREFIX,
     PROMPT_REGISTRY_HOMEPAGE,
     PROMPT_REGISTRY_SOURCE_BASE,
     toProxiedGithubUrl,
+    toProxiedImageUrl,
 } from "../src/services/api/prompt-source-presets";
 
 test("built-in prompt sources use the GitHub reverse proxy", () => {
@@ -44,4 +46,30 @@ test("toProxiedGithubUrl prefixes github resources and preserves non-github reso
     expect(toProxiedGithubUrl("https://example.com/prompts.json")).toBe("https://example.com/prompts.json");
     expect(toProxiedGithubUrl("https://r2.apimodels.app/cover.png")).toBe("https://r2.apimodels.app/cover.png");
     expect(toProxiedGithubUrl("")).toBe("");
+});
+
+test("toProxiedImageUrl proxies youmind, fixes songguoxs paths, and accelerates github images", () => {
+    // YouMind Cloudflare domain proxied via image CDN
+    expect(toProxiedImageUrl("https://cms-assets.youmind.com/media/test.jpg")).toBe(
+        `${IMAGE_PROXY_PREFIX}${encodeURIComponent("https://cms-assets.youmind.com/media/test.jpg")}`,
+    );
+    expect(toProxiedImageUrl("https://marketing-assets.youmind.com/campaigns/test.png")).toBe(
+        `${IMAGE_PROXY_PREFIX}${encodeURIComponent("https://marketing-assets.youmind.com/campaigns/test.png")}`,
+    );
+
+    // songguoxs /data/images/ path error corrected to repo root /images/ and proxied via GitHub proxy
+    expect(
+        toProxiedImageUrl("https://raw.githubusercontent.com/songguoxs/gpt4o-image-prompts/master/data/images/1050.jpeg"),
+    ).toBe(`${GITHUB_PROXY_PREFIX}https://raw.githubusercontent.com/songguoxs/gpt4o-image-prompts/master/images/1050.jpeg`);
+    expect(
+        toProxiedImageUrl("https://github.adc.dpdns.org/https://raw.githubusercontent.com/songguoxs/gpt4o-image-prompts/master/data/images/1050.jpeg"),
+    ).toBe(`${GITHUB_PROXY_PREFIX}https://raw.githubusercontent.com/songguoxs/gpt4o-image-prompts/master/images/1050.jpeg`);
+
+    // Standard GitHub asset URLs proxied
+    expect(toProxiedImageUrl("https://raw.githubusercontent.com/owner/repo/main/image.png")).toBe(
+        `${GITHUB_PROXY_PREFIX}https://raw.githubusercontent.com/owner/repo/main/image.png`,
+    );
+
+    // Other non-blocked hosts preserved
+    expect(toProxiedImageUrl("https://r2.apimodels.app/image.png")).toBe("https://r2.apimodels.app/image.png");
 });
