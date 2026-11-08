@@ -1,5 +1,5 @@
 appId: com.basketikun.infinite-canvas
-productName: 无限画布
+productName: Infinite Canvas
 copyright: Copyright © 2026 basketikun
 # 产物仅作为 CI Artifact 提供下载，不发布更新源；避免 electron-builder 生成 latest.yml 时推断发布渠道。
 publish: null
@@ -25,7 +25,7 @@ win:
       arch:
         - x64
   icon: build/icon.png
-  artifactName: 无限画布-${version}-win-${arch}.${ext}
+  artifactName: InfiniteCanvas-${version}-win-${arch}.${ext}
 nsis:
   oneClick: false
   perMachine: false
@@ -33,6 +33,11 @@ nsis:
   createDesktopShortcut: true
   shortcutName: 无限画布
   deleteAppDataOnUninstall: false
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  installerSidebar: build/installerSidebar.bmp
+  installerHeader: build/installerHeader.bmp
   installerLanguages:
     - zh_CN
   language: "2052"
@@ -44,7 +49,7 @@ mac:
         - arm64
   icon: build/icon.png
   category: public.app-category.graphics-design
-  artifactName: 无限画布-${version}-mac-${arch}.${ext}
+  artifactName: InfiniteCanvas-${version}-mac-${arch}.${ext}
 linux:
   target:
     - target: AppImage
@@ -52,4 +57,4 @@ linux:
         - x64
   icon: build/icon.png
   category: Graphics
-  artifactName: 无限画布-${version}-linux-${arch}.${ext}
+  artifactName: InfiniteCanvas-${version}-linux-${arch}.${ext}

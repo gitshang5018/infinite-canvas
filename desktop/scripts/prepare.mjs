@@ -1,7 +1,7 @@
 // 把 Web 前端产物打包成桌面客户端资源：
 // 1) 复制 web/dist 到 desktop/resources/web；
 // 2) 用 esbuild 把 canvas-proxy 打成 CommonJS，桌面端可直接以子进程方式启动；
-// 3) 渲染应用图标，供 electron-builder 生成各平台安装包。
+// 3) 渲染应用图标与 NSIS 安装向导现代美化位图，供 electron-builder 生成各平台安装包。
 import { existsSync } from "node:fs";
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -53,7 +53,19 @@ async function renderIcon() {
     await writeFile(path.join(buildDir, "icon.png"), resvg.render().asPng());
 }
 
+async function copyNsisAssets() {
+    const tauriIcons = path.join(repoDir, "desktop-tauri", "src-tauri", "icons");
+    const sidebarBmp = path.join(tauriIcons, "installer-sidebar.bmp");
+    const headerBmp = path.join(tauriIcons, "installer-header.bmp");
+    const iconIco = path.join(tauriIcons, "icon.ico");
+    await mkdir(buildDir, { recursive: true });
+    if (existsSync(sidebarBmp)) await cp(sidebarBmp, path.join(buildDir, "installerSidebar.bmp"));
+    if (existsSync(headerBmp)) await cp(headerBmp, path.join(buildDir, "installerHeader.bmp"));
+    if (existsSync(iconIco)) await cp(iconIco, path.join(buildDir, "icon.ico"));
+}
+
 await copyWebDist();
 await bundleProxy();
 await renderIcon();
+await copyNsisAssets();
 console.log("桌面端资源准备完成");

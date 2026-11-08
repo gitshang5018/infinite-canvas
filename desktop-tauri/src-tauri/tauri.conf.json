@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "无限画布",
+  "productName": "InfiniteCanvas",
   "version": "0.20.0",
   "identifier": "com.basketikun.infinitecanvas",
   "build": {
@@ -48,6 +48,11 @@
         "language": "zh-CN"
       },
       "nsis": {
+        "template": "./nsis/installer.nsi",
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
+        "sidebarImage": "icons/installer-sidebar.bmp",
+        "headerImage": "icons/installer-header.bmp",
         "languages": [
           "SimpChinese",
           "English"
