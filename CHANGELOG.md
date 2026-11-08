@@ -2,6 +2,7 @@
 
 ## Unreleased
 
++ [修复] 修复 React 19 下 Modal、Drawer 与 Image.PreviewGroup 未及时销毁导致 Portal 嵌套重渲染超出最大深度限制（Error #185）的问题，并为前端路由增加统一异常兜底界面。
 + [新增] 新增桌面客户端（Electron 封装），支持 Windows / macOS / Linux 安装包，由 GitHub Actions 自动构建产出。
 + [新增] 新增基于 Tauri 的轻量桌面客户端，安装包体积显著小于 Electron 版本，本地代理改用 Rust 实现并内嵌到应用进程。
 + [优化] 桌面客户端内置本地代理并随应用自动启动，前端默认开启本地代理，无需手动执行命令。

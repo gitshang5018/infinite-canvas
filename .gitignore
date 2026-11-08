@@ -29,3 +29,4 @@ desktop-tauri/src-tauri/target/
 desktop-tauri/src-tauri/gen/schemas/
 desktop-tauri/src-tauri/icons/android/
 desktop-tauri/src-tauri/icons/ios/
+.workbuddy-ai/

@@ -244,6 +244,7 @@ async fn proxy_forward(State(_): State<()>, request: Request) -> Response {
         .unwrap_or_default();
 
     if method == Method::OPTIONS {
+        println!("[proxy] OPTIONS 预检 {}", uri.path());
         return build_response(StatusCode::NO_CONTENT, cors_headers(), Body::empty());
     }
 
@@ -262,11 +263,12 @@ async fn proxy_forward(State(_): State<()>, request: Request) -> Response {
     };
 
     let client = reqwest::Client::new();
-    let mut outgoing = client.request(method, &target);
+    let mut outgoing = client.request(method.clone(), &target);
     outgoing = outgoing.headers(request_headers(&headers));
     if !body.is_empty() {
         outgoing = outgoing.body(body);
     }
+    println!("[proxy] {method} {target}");
 
     match outgoing.send().await {
         Ok(upstream) => {
@@ -493,5 +495,23 @@ mod tests {
         let body = axum::body::to_bytes(response.into_body(), 1024 * 1024).await.expect("read body");
         let text = String::from_utf8_lossy(&body).to_string();
         assert!(text.contains("infinite-canvas"), "缺少代理标识: {text}");
+    }
+}
+
+#[cfg(test)]
+mod path_tests {
+    use axum::http::Uri;
+
+    /// 浏览器把完整目标地址放在路径里，形如
+    /// /https://api.openai.com/v1/images/generations。
+    /// 这里确认 axum 解析出的 path 与 query 是否保持原样，
+    /// 代理据此还原上游地址。
+    #[test]
+    fn keeps_path_and_query_from_browser_request() {
+        let uri: Uri = "/https://api.openai.com/v1/images/generations?size=1024x1024".parse().expect("uri");
+        println!("path={:?}", uri.path());
+        println!("query={:?}", uri.query());
+        assert_eq!(uri.path(), "/https://api.openai.com/v1/images/generations");
+        assert_eq!(uri.query(), Some("size=1024x1024"));
     }
 }

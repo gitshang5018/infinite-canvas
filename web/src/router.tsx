@@ -1,6 +1,7 @@
 import { createBrowserRouter, Outlet } from "react-router-dom";
 
 import { AnalyticsTracker } from "@/components/layout/analytics-tracker";
+import { RouteError } from "@/components/layout/route-error";
 import UserLayout from "@/layouts/user-layout";
 import AssetsPage from "@/pages/assets";
 import CanvasPage from "@/pages/canvas";
@@ -20,6 +21,7 @@ export const router = createBrowserRouter([
                 <Outlet />
             </UserLayout>
         ),
+        errorElement: <RouteError />,
         children: [
             { path: "/", element: <HomePage /> },
             { path: "/image", element: <ImagePage /> },

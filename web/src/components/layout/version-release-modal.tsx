@@ -41,8 +41,10 @@ export function VersionReleaseModal({ className, style }: VersionReleaseModalPro
                     {hasNewVersion ? <span className="absolute -right-1.5 -top-1 size-1.5 rounded-full bg-green-500" /> : null}
                 </span>
             </button>
-            <Modal title={t("version.title")} open={open} width={680} centered footer={null} onCancel={() => setOpen(false)}>
-                <div className="mb-5 grid grid-cols-2 gap-3">
+            <Modal title={t("version.title")} open={open} destroyOnClose width={680} centered footer={null} onCancel={() => setOpen(false)}>
+                {open ? (
+                    <>
+                        <div className="mb-5 grid grid-cols-2 gap-3">
                     <div className="rounded-lg border border-stone-200 p-3 dark:border-stone-800">
                         <div className="text-xs text-stone-500 dark:text-stone-400">{t("version.currentVersion")}</div>
                         <div className="mt-1 text-base font-semibold text-stone-950 dark:text-stone-100">{APP_VERSION}</div>
@@ -88,7 +90,9 @@ export function VersionReleaseModal({ className, style }: VersionReleaseModalPro
                             ),
                         }))}
                     />
-                </div>
+                        </div>
+                    </>
+                ) : null}
             </Modal>
         </>
     );
