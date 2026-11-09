@@ -776,6 +776,12 @@ Section Install
     Call CreateOrUpdateDesktopShortcut
   ${EndIf}
 
+  ; Clean previous version web/http cache to prevent stale scripts or cached proxy responses
+  RMDir /r "$LOCALAPPDATA\${BUNDLEID}\EBWebView\Default\Cache"
+  RMDir /r "$LOCALAPPDATA\${BUNDLEID}\EBWebView\Default\Code Cache"
+  RMDir /r "$LOCALAPPDATA\${BUNDLEID}\EBWebView\Default\GPUCache"
+  RMDir /r "$LOCALAPPDATA\${BUNDLEID}\EBWebView\Default\Service Worker\CacheStorage"
+
   !ifmacrodef NSIS_HOOK_POSTINSTALL
     !insertmacro NSIS_HOOK_POSTINSTALL
   !endif

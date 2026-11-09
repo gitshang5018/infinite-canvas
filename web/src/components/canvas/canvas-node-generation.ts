@@ -157,21 +157,22 @@ function readNodeGenerationResource(node: CanvasNodeData): NodeGenerationResourc
 }
 
 export function buildNodeResponseMessages(context: NodeGenerationContext): AiTextMessage[] {
-    if (!context.referenceImages.length) {
+    const validImages = context.referenceImages.filter((image) => Boolean(image.dataUrl?.startsWith("data:") || /^https?:\/\//i.test(image.dataUrl)));
+    if (!validImages.length) {
         return [{ role: "user", content: context.prompt }];
     }
 
     return [
         {
             role: "user",
-            content: [{ type: "text" as const, text: context.prompt }, ...context.referenceImages.map((image) => ({ type: "image_url" as const, image_url: { url: image.dataUrl } }))],
+            content: [{ type: "text" as const, text: context.prompt }, ...validImages.map((image) => ({ type: "image_url" as const, image_url: { url: image.dataUrl } }))],
         },
     ];
 }
 
 export async function hydrateNodeGenerationContext(context: NodeGenerationContext) {
     const { imageToDataUrl } = await import("@/services/image-storage");
-    return { ...context, referenceImages: await Promise.all(context.referenceImages.map(async (image) => ({ ...image, dataUrl: await imageToDataUrl(image) }))) };
+    return { ...context, referenceImages: await Promise.all(context.referenceImages.map(async (image) => ({ ...image, dataUrl: await imageToDataUrl(image, { maxEdge: 1024 }) }))) };
 }
 
 function readNodeTextInput(node: CanvasNodeData) {

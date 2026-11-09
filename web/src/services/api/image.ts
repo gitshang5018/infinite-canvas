@@ -446,6 +446,13 @@ function consumeResponseStreamBlock(block: string, state: ResponseStreamState, o
         state.text += event.delta;
         onDelta?.(state.text);
     }
+    if (Array.isArray(event.choices)) {
+        const delta = (event.choices[0] as { delta?: { content?: string } })?.delta?.content;
+        if (typeof delta === "string") {
+            state.text += delta;
+            onDelta?.(state.text);
+        }
+    }
     if (type === "response.output_text.done" && !state.text && typeof event.text === "string") {
         state.text = event.text;
         onDelta?.(state.text);
@@ -501,6 +508,38 @@ async function requestStreamingResponse(config: AiConfig, body: Record<string, u
     validateResponsePayload(state.payload);
     const result = parseToolResponse(state.payload);
     return { ...result, content: state.text || result.content };
+}
+
+async function requestChatCompletionsStream(config: AiConfig, messages: AiTextMessage[], onDelta?: (text: string) => void, options?: RequestOptions): Promise<ToolResponseResult> {
+    const response = await fetch(aiApiUrl(config, "/chat/completions"), {
+        method: "POST",
+        headers: { ...aiHeaders(config, "application/json"), Accept: "text/event-stream" },
+        body: JSON.stringify({
+            model: config.model,
+            messages: withSystemMessage(config, messages),
+            stream: true,
+        }),
+        signal: options?.signal,
+    });
+    if (!response.ok) throw new Error(await readFetchError(response, apiText("requestFailed")));
+    if (!response.body) {
+        const payload = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+        const text = payload.choices?.[0]?.message?.content || "";
+        return { content: text, toolCalls: [] };
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    const state: ResponseStreamState = { buffer: "", text: "" };
+    for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        consumeResponseStreamText(state, decoder.decode(value, { stream: true }), onDelta);
+        if (state.error) throw new Error(state.error);
+    }
+    consumeResponseStreamText(state, decoder.decode(), onDelta, true);
+    if (state.error) throw new Error(state.error);
+    return { content: state.text, toolCalls: [] };
 }
 
 function toGeminiBody(config: AiConfig, messages: ResponseInputMessage[], extra?: Record<string, unknown>) {
@@ -847,13 +886,25 @@ export async function requestImageQuestion(config: AiConfig, messages: AiTextMes
             if (answer === apiText("noContent")) onDelta(answer);
             return answer;
         }
-        const answer = (await requestStreamingResponse(requestConfig, {
-            model: requestConfig.model,
-            input: toResponseInput(withSystemMessage(requestConfig, messages)),
-            ...(requestConfig.reasoningEffort === "auto" ? {} : { reasoning: { effort: requestConfig.reasoningEffort } }),
-        }, onDelta, options)).content || apiText("noContent");
-        if (answer === apiText("noContent")) onDelta(answer);
-        return answer;
+        let answer = "";
+        try {
+            answer = (await requestStreamingResponse(requestConfig, {
+                model: requestConfig.model,
+                input: toResponseInput(withSystemMessage(requestConfig, messages)),
+                ...(requestConfig.reasoningEffort === "auto" ? {} : { reasoning: { effort: requestConfig.reasoningEffort } }),
+            }, onDelta, options)).content || "";
+        } catch (responsesError) {
+            if (options?.signal?.aborted) throw responsesError;
+            try {
+                answer = (await requestChatCompletionsStream(requestConfig, messages, onDelta, options)).content || "";
+            } catch (chatError) {
+                if (options?.signal?.aborted) throw chatError;
+                throw responsesError;
+            }
+        }
+        const text = answer.trim() || apiText("noContent");
+        if (text === apiText("noContent")) onDelta(text);
+        return text;
     } catch (error) {
         throw new Error(readAxiosError(error, apiText("requestFailed")));
     }

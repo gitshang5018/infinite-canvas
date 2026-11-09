@@ -242,14 +242,37 @@ export async function setImageBlob(storageKey: string, blob: Blob) {
     return url;
 }
 
-export async function imageToDataUrl(image: { url?: string; dataUrl?: string; storageKey?: string }, options?: ImageReadOptions) {
-    if (image.dataUrl?.startsWith("data:")) return image.dataUrl;
+export async function imageToDataUrl(image: { url?: string; dataUrl?: string; storageKey?: string }, options?: ImageReadOptions & { maxEdge?: number }) {
+    if (image.dataUrl?.startsWith("data:")) {
+        if (!options?.maxEdge || image.dataUrl.length < 300 * 1024) return image.dataUrl;
+        try {
+            const rawBlob = dataUrlToBlob(image.dataUrl);
+            const thumb = await createImageThumbnail(rawBlob, options.maxEdge).catch(() => undefined);
+            if (thumb) return blobToDataUrl(thumb);
+        } catch {
+            // Keep original if thumbnail generation fails.
+        }
+        return image.dataUrl;
+    }
     if (image.storageKey) {
+        if (options?.maxEdge) {
+            const previewBlob = await previewStore.getItem<Blob>(image.storageKey);
+            if (previewBlob) return blobToDataUrl(previewBlob);
+        }
         const blob = await getImageBlob(image.storageKey);
-        if (blob) return blobToDataUrl(blob);
+        if (blob) {
+            if (options?.maxEdge && blob.size > 200 * 1024) {
+                const thumb = await createImageThumbnail(blob, options.maxEdge).catch(() => undefined);
+                if (thumb) return blobToDataUrl(thumb);
+            }
+            return blobToDataUrl(blob);
+        }
+        const previewBlob = await previewStore.getItem<Blob>(image.storageKey);
+        if (previewBlob) return blobToDataUrl(previewBlob);
     }
     const url = (image.dataUrl && !image.dataUrl.startsWith("data:") ? image.dataUrl : "") || (await resolveImageUrl(image.storageKey, image.url || ""));
     if (!url || url.startsWith("data:")) return url;
+    if (url.startsWith("blob:")) return "";
     return blobToDataUrl(await fetchImageBlob(url, options));
 }
 
