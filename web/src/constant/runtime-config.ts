@@ -40,6 +40,5 @@ export const IS_DESKTOP = read("DESKTOP", import.meta.env.VITE_DESKTOP) === "1"
     ));
 // The desktop client ships with a local proxy and injects its address here, so requests go through it without extra setup.
 export const LOCAL_PROXY_URL = read("LOCAL_PROXY_URL", import.meta.env.VITE_LOCAL_PROXY_URL) || (IS_DESKTOP ? "http://127.0.0.1:23210" : "");
-// A desktop runtime always needs its bundled proxy: a persisted profile may have disabled
-// the proxy or retained a stale address from an earlier installation.
-export const EFFECTIVE_LOCAL_PROXY_URL = IS_DESKTOP ? (LOCAL_PROXY_URL || "http://127.0.0.1:23210") : "";
+// Do not force proxy in desktop mode; direct connections are preferred by default.
+export const EFFECTIVE_LOCAL_PROXY_URL = "";

@@ -20,40 +20,28 @@ const { defaultConfig, mergePersistedConfig, withLocalProxy } = await import("..
 
 const runtimeProxyUrl = "http://127.0.0.1:23210";
 
-test("desktop runtime proxy overrides a persisted disabled proxy setting to prevent CORS failures", () => {
+test("desktop defaults to direct connection without forcing proxy", () => {
     const merged = mergePersistedConfig(
         defaultConfig,
         { config: { proxyEnabled: false, proxyUrl: runtimeProxyUrl } },
         runtimeProxyUrl,
     );
 
-    expect(merged.config.proxyEnabled).toBe(true);
+    expect(merged.config.proxyEnabled).toBe(false);
     expect(merged.config.proxyUrl).toBe("http://127.0.0.1:23210");
 });
 
-test("desktop runtime proxy defaults to enabled when no preference is persisted", () => {
+test("desktop keeps proxyEnabled false by default when not configured", () => {
     const merged = mergePersistedConfig(
         defaultConfig,
         {},
         runtimeProxyUrl,
     );
 
-    expect(merged.config.proxyEnabled).toBe(true);
-    expect(merged.config.proxyUrl).toBe(runtimeProxyUrl);
+    expect(merged.config.proxyEnabled).toBe(false);
 });
 
-test("desktop runtime proxy overrides a persisted stale proxy address", () => {
-    const merged = mergePersistedConfig(
-        defaultConfig,
-        { config: { proxyEnabled: true, proxyUrl: "http://127.0.0.1:9999" } },
-        runtimeProxyUrl,
-    );
-
-    expect(merged.config.proxyEnabled).toBe(true);
-    expect(merged.config.proxyUrl).toBe(runtimeProxyUrl);
-});
-
-test("desktop runtime proxy keeps persisted provider credentials while forcing proxy enabled", () => {
+test("desktop keeps persisted provider credentials and direct connection preference", () => {
     const merged = mergePersistedConfig(
         defaultConfig,
         { config: { apiKey: "persisted-key", proxyEnabled: false, proxyUrl: runtimeProxyUrl } },
@@ -61,7 +49,7 @@ test("desktop runtime proxy keeps persisted provider credentials while forcing p
     );
 
     expect(merged.config.apiKey).toBe("persisted-key");
-    expect(merged.config.proxyEnabled).toBe(true);
+    expect(merged.config.proxyEnabled).toBe(false);
     expect(merged.config.proxyUrl).toBe(runtimeProxyUrl);
 });
 
@@ -76,7 +64,7 @@ test("web runtime keeps the persisted proxy preference", () => {
     expect(merged.config.proxyUrl).toBe("http://127.0.0.1:9999");
 });
 
-test("withLocalProxy avoids double-wrapping an already proxied url", () => {
-    const proxied = "http://127.0.0.1:23210/https://api.openai.com/v1/images/generations";
-    expect(withLocalProxy(proxied)).toBe(proxied);
+test("withLocalProxy returns direct url when proxyEnabled is false", () => {
+    const url = "https://api.openai.com/v1/images/generations";
+    expect(withLocalProxy(url)).toBe(url);
 });

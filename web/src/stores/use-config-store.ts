@@ -124,7 +124,7 @@ export const defaultConfig: AiConfig = {
     background: "",
     count: "1",
     canvasImageCount: "3",
-    proxyEnabled: Boolean(RUNTIME_LOCAL_PROXY_URL),
+    proxyEnabled: false,
     proxyUrl: RUNTIME_LOCAL_PROXY_URL || DEFAULT_LOCAL_PROXY_URL,
     nodeRegenerateBehavior: "new-node",
     autoFocusOnSelect: false,
@@ -244,7 +244,7 @@ export function mergePersistedConfig(current: AiConfig, persistedState: { config
             videoWatermark: config.videoWatermark || "false",
             videoMode: config.videoMode === "reference" ? "reference" : "frames",
             canvasImageCount: config.canvasImageCount || "3",
-            proxyEnabled: runtimeProxyUrl ? true : Boolean(config.proxyEnabled),
+            proxyEnabled: Boolean(config.proxyEnabled),
             proxyUrl: runtimeProxyUrl || config.proxyUrl || DEFAULT_LOCAL_PROXY_URL,
             nodeRegenerateBehavior: config.nodeRegenerateBehavior === "overwrite" ? ("overwrite" as const) : ("new-node" as const),
             autoFocusOnSelect: Boolean(config.autoFocusOnSelect),
@@ -510,9 +510,8 @@ export function normalizeLocalProxyUrl(value: string) {
 /** Prefix an outgoing request with the local forwarding proxy so the browser is not blocked by CORS. */
 export function withLocalProxy(url: string) {
     const { proxyEnabled, proxyUrl } = useConfigStore.getState().config;
-    const isDesktop = IS_DESKTOP || Boolean(RUNTIME_LOCAL_PROXY_URL);
-    if ((!proxyEnabled && !isDesktop) || !/^https?:\/\//i.test(url)) return url;
-    const base = normalizeLocalProxyUrl(proxyUrl || RUNTIME_LOCAL_PROXY_URL || DEFAULT_LOCAL_PROXY_URL);
+    if (!proxyEnabled || !/^https?:\/\//i.test(url)) return url;
+    const base = normalizeLocalProxyUrl(proxyUrl || DEFAULT_LOCAL_PROXY_URL);
     if (!base || url.startsWith(`${base}/`)) return url;
     if (/^https?:\/\/(127\.0\.0\.1|localhost):23210\//i.test(url)) return url;
     return `${base}/${url}`;

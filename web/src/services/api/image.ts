@@ -256,7 +256,11 @@ function readApiErrorMessage(value: unknown): string {
             return inner;
         } catch {
             // Detect HTML error pages.
-            if (/<[a-z][\s\S]*>/i.test(value)) return apiText("htmlError", { preview: `${value.slice(0, 80)}...` });
+            if (/<[a-z][\s\S]*>/i.test(value)) {
+                const titleMatch = value.match(/<title>([^<]+)<\/title>/i);
+                const titleText = titleMatch ? titleMatch[1].trim() : `${value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 80)}...`;
+                return apiText("htmlError", { preview: titleText });
+            }
             return value;
         }
     }
@@ -733,9 +737,8 @@ export async function requestGeneration(config: AiConfig, prompt: string, option
                 ...(quality ? { quality } : {}),
                 ...(requestSize ? { size: requestSize } : {}),
                 ...(background ? { background } : {}),
-                // gpt-image models reject response_format; they always return b64.
-                ...(/gpt-image/.test(requestConfig.model) ? {} : { response_format: "b64_json" }),
-                output_format: IMAGE_OUTPUT_FORMAT,
+                // gpt-image models reject response_format and expect output_format; standard models use response_format.
+                ...(/gpt-image/.test(requestConfig.model) ? { output_format: IMAGE_OUTPUT_FORMAT } : { response_format: "b64_json" }),
             },
             {
                 headers: aiHeaders(requestConfig, "application/json"),
@@ -790,11 +793,12 @@ export async function requestEdit(config: AiConfig, prompt: string, references: 
     formData.set("model", requestConfig.model);
     formData.set("prompt", withSystemPrompt(requestConfig, requestPrompt));
     formData.set("n", String(n));
-    // gpt-image models reject response_format; they always return b64.
-    if (!/gpt-image/.test(requestConfig.model)) {
+    // gpt-image models reject response_format and expect output_format; standard models use response_format.
+    if (/gpt-image/.test(requestConfig.model)) {
+        formData.set("output_format", IMAGE_OUTPUT_FORMAT);
+    } else {
         formData.set("response_format", "b64_json");
     }
-    formData.set("output_format", IMAGE_OUTPUT_FORMAT);
     if (quality) {
         formData.set("quality", quality);
     }
