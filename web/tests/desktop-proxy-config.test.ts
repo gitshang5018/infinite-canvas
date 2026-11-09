@@ -16,18 +16,18 @@ afterAll(() => {
     else Reflect.deleteProperty(globalThis, "localStorage");
 });
 
-const { defaultConfig, mergePersistedConfig } = await import("../src/stores/use-config-store");
+const { defaultConfig, mergePersistedConfig, withLocalProxy } = await import("../src/stores/use-config-store");
 
 const runtimeProxyUrl = "http://127.0.0.1:23210";
 
-test("desktop runtime proxy keeps an explicit disabled proxy setting for direct connections", () => {
+test("desktop runtime proxy overrides a persisted disabled proxy setting to prevent CORS failures", () => {
     const merged = mergePersistedConfig(
         defaultConfig,
         { config: { proxyEnabled: false, proxyUrl: runtimeProxyUrl } },
         runtimeProxyUrl,
     );
 
-    expect(merged.config.proxyEnabled).toBe(false);
+    expect(merged.config.proxyEnabled).toBe(true);
     expect(merged.config.proxyUrl).toBe("http://127.0.0.1:23210");
 });
 
@@ -53,7 +53,7 @@ test("desktop runtime proxy overrides a persisted stale proxy address", () => {
     expect(merged.config.proxyUrl).toBe(runtimeProxyUrl);
 });
 
-test("desktop runtime proxy keeps persisted provider credentials and proxy preference", () => {
+test("desktop runtime proxy keeps persisted provider credentials while forcing proxy enabled", () => {
     const merged = mergePersistedConfig(
         defaultConfig,
         { config: { apiKey: "persisted-key", proxyEnabled: false, proxyUrl: runtimeProxyUrl } },
@@ -61,7 +61,7 @@ test("desktop runtime proxy keeps persisted provider credentials and proxy prefe
     );
 
     expect(merged.config.apiKey).toBe("persisted-key");
-    expect(merged.config.proxyEnabled).toBe(false);
+    expect(merged.config.proxyEnabled).toBe(true);
     expect(merged.config.proxyUrl).toBe(runtimeProxyUrl);
 });
 
@@ -74,4 +74,9 @@ test("web runtime keeps the persisted proxy preference", () => {
 
     expect(merged.config.proxyEnabled).toBe(false);
     expect(merged.config.proxyUrl).toBe("http://127.0.0.1:9999");
+});
+
+test("withLocalProxy avoids double-wrapping an already proxied url", () => {
+    const proxied = "http://127.0.0.1:23210/https://api.openai.com/v1/images/generations";
+    expect(withLocalProxy(proxied)).toBe(proxied);
 });

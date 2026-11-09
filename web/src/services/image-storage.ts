@@ -58,7 +58,7 @@ export async function uploadImage(input: string | Blob, options?: ImageReadOptio
             blob = await fetchImageBlob(input, options);
         } catch (error) {
             if (options?.signal?.aborted || isNamedError(error, IMAGE_RESPONSE_ERROR) || isNamedError(error, IMAGE_TIMEOUT_ERROR) || !/^https?:\/\//i.test(input)) throw error;
-            const meta = await loadImageMeta(input, options, IMAGE_REMOTE_LOAD_TIMEOUT_MS);
+            const meta = await loadImageMeta(withLocalProxy(input), options, IMAGE_REMOTE_LOAD_TIMEOUT_MS);
             if (!meta) throw error;
             return { url: input, width: meta.width, height: meta.height, bytes: 0, mimeType: "" };
         }
@@ -86,6 +86,9 @@ async function storeImage(blob: Blob, options?: ImageReadOptions): Promise<Uploa
 }
 
 async function fetchImageBlob(url: string, options?: ImageReadOptions) {
+    if (url.startsWith("data:")) {
+        return dataUrlToBlob(url);
+    }
     const controller = new AbortController();
     let timedOut = false;
     const abort = () => controller.abort();
