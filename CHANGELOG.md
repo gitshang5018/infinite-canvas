@@ -2,6 +2,9 @@
 
 ## Unreleased
 
++ [优化] 优化 Windows 安装包快捷方式：桌面与开始菜单快捷方式统一命名为中文「无限画布」，安装包文件及程序主二进制文件保持英文命名。
++ [优化] Windows 安装包在安装与升级时自动清理旧版本 WebView2 临时缓存（Cache、Code Cache、GPUCache 等），避免历史脚本和代理缓存导致异常，并保留用户本地配置与项目。
+
 + [优化] 桌面端安装包文件名保持为英文，安装包内置应用真实图标与现代化深色向导位图（替换 NSIS 默认复古电脑图），并创建中文桌面快捷方式。
 + [修复] 修复 React 19 下 Modal、Drawer 与 Image.PreviewGroup 未及时销毁导致 Portal 嵌套重渲染超出最大深度限制（Error #185）的问题，并为前端路由增加统一异常兜底界面。
 + [新增] 新增桌面客户端（Electron 封装），支持 Windows / macOS / Linux 安装包，由 GitHub Actions 自动构建产出。
