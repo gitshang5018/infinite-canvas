@@ -7,7 +7,7 @@ description: 当前版本已实现但仍需人工验证的变更项
 
 - 桌面客户端安装包图标与本地化：安装包文件名保持为英文（如 InfiniteCanvas-0.20.0-win-x64.exe 与 InfiniteCanvas_0.20.0_x64-setup.exe），安装包与卸载程序均内置无限画布品牌图标；Windows NSIS 安装向导使用现代化深色品牌立绘（替换默认复古电脑插图）并以简体中文呈现，安装完成后桌面快捷方式与开始菜单名称均为「无限画布」。
 
-- 桌面客户端直连与生图优化：桌面客户端默认采用直连，不强制开启本地代理，完全保留用户的直连配置；生图请求仅在 gpt-image 系列模型中发送专属参数，避免向标准 OpenAI 接口发送非标字段，HTML 错误页面提取 Title 文本展示；带参考图生图和视频生成直接从本地 Blob 构造非空表单文件，不再因 Base64/URL 转换缺陷产生空文件导致服务端报错 `image file is empty`。Windows Release 安装后不得出现 `0xc0000409` 崩溃，窗口和 WebView 应正常创建。
+- 桌面客户端直连与生图优化：桌面客户端默认采用直连，不强制开启本地代理，完全保留用户的直连配置；画布生图对齐生图工作台行为，提示词输入默认按纯文本生成图片，避免将当前图片节点自动作为参考图触发服务不支持的 `/images/edits` 编辑接口；节点模型未就绪时自动回退至全局可用生图模型，多图生成采用顺序执行避免并发触发上游限流；生图请求仅在 gpt-image 系列模型中发送专属参数，避免向标准 OpenAI 接口发送非标字段，HTML 错误页面提取 Title 文本展示；带参考图生图和视频生成直接从本地 Blob 构造非空表单文件，不再因 Base64/URL 转换缺陷产生空文件导致服务端报错 `image file is empty`。Windows Release 安装后不得出现 `0xc0000409` 崩溃，窗口和 WebView 应正常创建。
 
 - 提示词库反代与预设扩充：内置提示词预设扩充新增 ApiModels GPT Image 2、松果 GPT-4o 以及 StretchCloud GPT Image 2.5 词库；所有内置提示词来源、自定义 GitHub 源及提示词列表/详情页中的 GitHub 封面与参考图均通过 `github.adc.dpdns.org` 反代加速；针对 YouMind（`cms-assets.youmind.com`）由 Cloudflare 托管且国内受限的问题增加图像 CDN 镜像反代并配置 `no-referrer`，同时修正松果 GPT-4o 的相对路径错误（纠正为仓库根目录 `/images/`），国内网络环境下各类提示词图片均能正常流畅加载。桌面客户端在 GitHub Actions 编译成功后，Releases 中应出现本次提交对应的 Windows、macOS 和 Linux 安装包。
 

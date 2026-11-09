@@ -123,7 +123,7 @@ export const defaultConfig: AiConfig = {
     size: "1:1",
     background: "",
     count: "1",
-    canvasImageCount: "3",
+    canvasImageCount: "1",
     proxyEnabled: false,
     proxyUrl: RUNTIME_LOCAL_PROXY_URL || DEFAULT_LOCAL_PROXY_URL,
     nodeRegenerateBehavior: "new-node",
@@ -187,9 +187,25 @@ export function modelMatchesCapability(config: AiConfig, value: string, capabili
     return modelCapabilityOf(config, value) === capability;
 }
 
+export function isAiConfigReady(config: AiConfig, model: string) {
+    const match = findChannelModel(config, model);
+    return Boolean(match && match.channel.baseUrl.trim() && match.channel.apiKey.trim());
+}
+
 export function resolveModelForCapability(config: AiConfig, currentModel: string | undefined, capability: ModelCapability) {
     const defaultModel = capability === "image" ? config.imageModel : capability === "video" ? config.videoModel : capability === "audio" ? config.audioModel : config.textModel;
     const fallbackModel = capability === "image" ? defaultConfig.imageModel : capability === "video" ? defaultConfig.videoModel : capability === "audio" ? defaultConfig.audioModel : defaultConfig.textModel;
+
+    if (currentModel && isAiConfigReady(config, currentModel)) {
+        const configuredCapability = modelCapabilityOf(config, currentModel);
+        if (!configuredCapability || configuredCapability === capability) return currentModel;
+    }
+
+    if (defaultModel && isAiConfigReady(config, defaultModel)) {
+        const configuredCapability = modelCapabilityOf(config, defaultModel);
+        if (!configuredCapability || configuredCapability === capability) return defaultModel;
+    }
+
     for (const model of [currentModel, defaultModel]) {
         if (!model) continue;
         const configuredCapability = modelCapabilityOf(config, model);
@@ -208,11 +224,6 @@ export function selectableModelsByCapability(config: AiConfig, capability?: Mode
 /** The user script (if any) attached to a model; empty string means use the system default call. */
 export function resolveModelScript(config: AiConfig, value: string) {
     return findChannelModel(config, value)?.model.script?.trim() || "";
-}
-
-function isAiConfigReady(config: AiConfig, model: string) {
-    const match = findChannelModel(config, model);
-    return Boolean(match && match.channel.baseUrl.trim() && match.channel.apiKey.trim());
 }
 
 export function mergePersistedConfig(current: AiConfig, persistedState: { config?: Partial<AiConfig>; webdav?: Partial<WebdavSyncConfig> }, runtimeProxyUrl = EFFECTIVE_LOCAL_PROXY_URL): { config: AiConfig; webdav: WebdavSyncConfig } {
