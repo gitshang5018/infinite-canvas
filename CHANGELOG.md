@@ -2,6 +2,7 @@
 
 ## Unreleased
 
++ [修复] 修复 Tauri 桌面客户端 CSP 未放行脚本动态加载协议，导致节点插件安装失败并提示 Failed to fetch dynamically imported module 的问题。
 + [优化] 优化 Windows 安装包快捷方式：桌面与开始菜单快捷方式统一命名为中文「无限画布」，安装包文件及程序主二进制文件保持英文命名。
 + [优化] Windows 安装包在安装与升级时自动清理旧版本 WebView2 临时缓存（Cache、Code Cache、GPUCache 等），避免历史脚本和代理缓存导致异常，并保留用户本地配置与项目。
 
