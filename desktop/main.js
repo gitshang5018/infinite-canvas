@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, shell, session } = require("electron");
+const { app, BrowserWindow, Menu, ipcMain, shell, session } = require("electron");
 const http = require("node:http");
 const net = require("node:net");
 const fs = require("node:fs");
@@ -176,18 +176,23 @@ function createStaticServer(root) {
 }
 
 function createWindow() {
+    const iconPath = path.join(__dirname, "build", "icon.png");
     mainWindow = new BrowserWindow({
+        icon: fs.existsSync(iconPath) ? iconPath : undefined,
         width: 1440,
         height: 900,
         minWidth: 960,
         minHeight: 640,
         title: "无限画布",
+        frame: process.platform !== "darwin" ? false : true,
+        titleBarStyle: process.platform === "darwin" ? "hiddenInset" : undefined,
         backgroundColor: "#1c1917",
         show: false,
         webPreferences: {
             contextIsolation: true,
             nodeIntegration: false,
             sandbox: true,
+            preload: path.join(__dirname, "preload.js"),
         },
     });
     mainWindow.once("ready-to-show", () => mainWindow.show());
@@ -255,6 +260,14 @@ async function resolveDownloadPath(fileName) {
     }
     return path.join(dir, fileName);
 }
+
+ipcMain.on("desktop-window:minimize", () => mainWindow?.minimize());
+ipcMain.on("desktop-window:toggle-maximize", () => {
+    if (!mainWindow) return;
+    if (mainWindow.isMaximized()) mainWindow.unmaximize();
+    else mainWindow.maximize();
+});
+ipcMain.on("desktop-window:close", () => mainWindow?.close());
 
 if (!app.requestSingleInstanceLock()) {
     app.quit();

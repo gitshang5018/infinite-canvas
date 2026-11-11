@@ -1,5 +1,5 @@
 import { ArrowRight } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { App, Button, Image, Tag } from "antd";
 import { useNavigate } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
@@ -30,6 +30,17 @@ export default function IndexPage() {
     const [promptShowcase, setPromptShowcase] = useState<Prompt[]>([]);
     const [previewIndex, setPreviewIndex] = useState(0);
     const [previewOpen, setPreviewOpen] = useState(false);
+
+    const previewConfig = useMemo(
+        () => ({
+            open: previewOpen,
+            current: previewIndex,
+            destroyOnClose: true,
+            onOpenChange: setPreviewOpen,
+            onChange: setPreviewIndex,
+        }),
+        [previewIndex, previewOpen],
+    );
 
     useEffect(() => {
         void fetchPrompts({ pageSize: 12 })
@@ -101,20 +112,15 @@ export default function IndexPage() {
                     </div>
                 </section>
             </section>
-            <Image.PreviewGroup
-                preview={{
-                    open: previewOpen,
-                    current: previewIndex,
-                    onOpenChange: setPreviewOpen,
-                    onChange: setPreviewIndex,
-                }}
-            >
-                <div className="hidden">
-                    {promptShowcase.map((item) => (
-                        <Image key={item.id} src={item.coverUrl} alt={item.title} />
-                    ))}
-                </div>
-            </Image.PreviewGroup>
+            {promptShowcase.length > 0 ? (
+                <Image.PreviewGroup preview={previewConfig}>
+                    <div className="hidden">
+                        {promptShowcase.map((item) => (
+                            <Image key={item.id} src={item.coverUrl} alt={item.title} />
+                        ))}
+                    </div>
+                </Image.PreviewGroup>
+            ) : null}
         </main>
     );
 }

@@ -10,6 +10,7 @@ type RuntimeConfig = {
     ANALYTICS_BAIDU_ID?: string; // Baidu Analytics site ID
     LOCAL_PROXY_URL?: string; // Local proxy address, injected by the desktop client
     DESKTOP?: string; // Set by the desktop client to mark the desktop runtime
+    DESKTOP_PLATFORM?: string; // Operating system reported by the desktop client
 };
 
 declare global {
@@ -33,3 +34,6 @@ export const ANALYTICS_BAIDU_ID = read("ANALYTICS_BAIDU_ID", import.meta.env.VIT
 export const LOCAL_PROXY_URL = read("LOCAL_PROXY_URL", import.meta.env.VITE_LOCAL_PROXY_URL);
 // The desktop client manages the local proxy itself, so the UI hides the manual start command.
 export const IS_DESKTOP = read("DESKTOP", import.meta.env.VITE_DESKTOP) === "1";
+// A desktop runtime always needs its bundled proxy: a persisted profile may have disabled
+// the proxy or retained a stale address from an earlier installation.
+export const EFFECTIVE_LOCAL_PROXY_URL = IS_DESKTOP ? LOCAL_PROXY_URL : "";

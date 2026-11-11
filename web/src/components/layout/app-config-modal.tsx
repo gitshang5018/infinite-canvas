@@ -378,13 +378,14 @@ export function AppConfigModal() {
                 </div>
             }
             open={isConfigOpen}
+            destroyOnClose
             width={980}
             centered
             onCancel={() => setConfigDialogOpen(false)}
             styles={{ body: { maxHeight: "72vh", overflowY: "auto", paddingRight: 12 } }}
             footer={null}
         >
-            <AppConfigPanel showDoneButton initialTab={configTab} />
+            {isConfigOpen ? <AppConfigPanel showDoneButton initialTab={configTab} /> : null}
         </Modal>
     );
 }

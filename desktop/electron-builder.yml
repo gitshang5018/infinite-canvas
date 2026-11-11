@@ -1,11 +1,14 @@
 appId: com.basketikun.infinite-canvas
 productName: Infinite Canvas
 copyright: Copyright © 2026 basketikun
+# 产物仅作为 CI Artifact 提供下载，不发布更新源；避免 electron-builder 生成 latest.yml 时推断发布渠道。
+publish: null
 directories:
   output: release
   buildResources: build
 files:
   - main.js
+  - preload.js
   - package.json
 # 前端产物与本地代理放在 asar 之外，主进程按真实目录读取。
 extraResources:
@@ -30,6 +33,14 @@ nsis:
   createDesktopShortcut: true
   shortcutName: 无限画布
   deleteAppDataOnUninstall: false
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  installerSidebar: build/installerSidebar.bmp
+  installerHeader: build/installerHeader.bmp
+  installerLanguages:
+    - zh_CN
+  language: "2052"
 mac:
   target:
     - target: dmg

@@ -9,6 +9,10 @@
     },
     "license": "MIT",
     "private": true,
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/gitshang5018/infinite-canvas.git"
+    },
     "main": "main.js",
     "scripts": {
         "prepare:app": "node scripts/prepare.mjs",

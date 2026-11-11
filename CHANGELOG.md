@@ -2,8 +2,23 @@
 
 ## Unreleased
 
++ [修复] 修复 Tauri 桌面客户端 CSP 未放行脚本动态加载协议，导致节点插件安装失败并提示 Failed to fetch dynamically imported module 的问题。
++ [优化] 优化 Windows 安装包快捷方式：桌面与开始菜单快捷方式统一命名为中文「无限画布」，安装包文件及程序主二进制文件保持英文命名。
++ [优化] Windows 安装包在安装与升级时自动清理旧版本 WebView2 临时缓存（Cache、Code Cache、GPUCache 等），避免历史脚本和代理缓存导致异常，并保留用户本地配置与项目。
+
++ [优化] 桌面端安装包文件名保持为英文，安装包内置应用真实图标与现代化深色向导位图（替换 NSIS 默认复古电脑图），并创建中文桌面快捷方式。
++ [修复] 修复 React 19 下 Modal、Drawer 与 Image.PreviewGroup 未及时销毁导致 Portal 嵌套重渲染超出最大深度限制（Error #185）的问题，并为前端路由增加统一异常兜底界面。
 + [新增] 新增桌面客户端（Electron 封装），支持 Windows / macOS / Linux 安装包，由 GitHub Actions 自动构建产出。
++ [新增] 新增基于 Tauri 的轻量桌面客户端，安装包体积显著小于 Electron 版本，本地代理改用 Rust 实现并内嵌到应用进程。
 + [优化] 桌面客户端内置本地代理并随应用自动启动，前端默认开启本地代理，无需手动执行命令。
++ [优化] 桌面客户端采用透明无边框标题栏，窗口按钮固定在窗口右上角，顶部导航与画布工具栏不再整体下移。
++ [修复] 桌面客户端保留用户关闭代理的直连设置，并在 CSP 中放行本地图片协议与优化 Base64 存图，解决生图时提示 Failed to fetch 的问题。
++ [修复] 修复带参考图生图及视频生成时直接读取本地 Blob 构建表单文件并纠正 Data URL 转换，解决提交空文件提示 image file is empty 的问题。
++ [修复] 修复 Tauri 桌面客户端 Release 版本在 Windows 启动时因异常中止策略触发 `0xc0000409` 崩溃的问题。
++ [修复] 修复提示词库中 YouMind 资源由于 Cloudflare 节点受限及防盗链导致图片无法显示的问题，并修正松果 GPT-4o 相对路径解析，全面增加图像 CDN 反代与 no-referrer 策略。
++ [新增] 扩充内置提示词库预设（新增 ApiModels GPT Image 2、松果 GPT-4o 以及 StretchCloud GPT Image 2.5 词库），且提示词库源及 GitHub 图片资源全面支持通过反代地址流畅加载。
++ [优化] 内置提示词库改用 GitHub 反代地址加载，降低跨域及网络访问失败的影响。
++ [优化] 桌面客户端在 GitHub Actions 编译成功后自动发布 Windows、macOS 和 Linux 安装包到 Releases。
 
 ## v0.20.0 - 2026-10-10
 

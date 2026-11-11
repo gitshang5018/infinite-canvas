@@ -1,0 +1,36 @@
+[package]
+name = "infinite-canvas-desktop"
+version = "0.20.0"
+description = "无限画布桌面客户端"
+authors = ["gitshang5018"]
+license = "MIT"
+edition = "2021"
+rust-version = "1.85"
+
+[lib]
+# `_lib` 后缀避免 Windows 下与二进制名冲突，见 cargo#8519。
+name = "infinite_canvas_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio"] }
+http = "1"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "macros"] }
+futures-util = "0.3"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+# Keep unwinding enabled: Tauri/Wry's Windows WebView2 teardown path relies on
+# normal Rust stack unwinding. `panic = "abort"` turns that path into
+# STATUS_STACK_BUFFER_OVERRUN (0xc0000409) and crashes the release app.
+strip = true

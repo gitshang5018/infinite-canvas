@@ -7,7 +7,7 @@ import { PromptDetailDialog } from "@/pages/prompts/components/prompt-detail-dia
 import { useCopyText } from "@/hooks/use-copy-text";
 import { useAssetStore } from "@/stores/use-asset-store";
 import { fetchSourcePrompts, refreshSource, type Prompt } from "@/services/api/prompts";
-import type { PromptSource } from "@/services/api/prompt-source-presets";
+import { toProxiedImageUrl, type PromptSource } from "@/services/api/prompt-source-presets";
 
 export function PromptSourceContentModal({ source, onClose }: { source: PromptSource | null; onClose: () => void }) {
     const { message } = App.useApp();
@@ -75,7 +75,7 @@ export function PromptSourceContentModal({ source, onClose }: { source: PromptSo
                             title: t("config.promptSources.content.cover"),
                             dataIndex: "coverUrl",
                             width: 72,
-                            render: (coverUrl: string) => (coverUrl ? <img src={coverUrl} alt="" className="size-12 rounded object-cover" /> : <div className="size-12 rounded bg-stone-100 dark:bg-stone-800" />),
+                            render: (coverUrl: string) => (coverUrl ? <img src={toProxiedImageUrl(coverUrl)} alt="" referrerPolicy="no-referrer" className="size-12 rounded object-cover" /> : <div className="size-12 rounded bg-stone-100 dark:bg-stone-800" />),
                         },
                         {
                             title: t("config.promptSources.content.titleColumn"),

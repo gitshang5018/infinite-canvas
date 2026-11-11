@@ -3,11 +3,12 @@ import { Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
 
 import { canvasThemes } from "@/lib/canvas-theme";
+import { DESKTOP_WINDOW_CONTROLS_WIDTH } from "@/components/layout/desktop-titlebar";
 
 export function AgentPanelTabs<T extends string>({ value, items, theme, leading, right, onChange }: { value: T; items: { value: T; label: string; icon?: ReactNode; count?: number }[]; theme: (typeof canvasThemes)[keyof typeof canvasThemes]; leading?: ReactNode; right?: ReactNode; onChange: (value: T) => void }) {
     const { t } = useTranslation();
     return (
-        <div className="@container border-b px-2" style={{ borderColor: theme.node.stroke }}>
+        <div className="@container border-b px-2" data-tauri-drag-region="deep" style={{ borderColor: theme.node.stroke, paddingRight: window.desktopWindow ? DESKTOP_WINDOW_CONTROLS_WIDTH : undefined }}>
             <div className="flex h-12 items-center gap-1">
                 {leading ? <div className="flex shrink-0 items-center">{leading}</div> : null}
                 <nav className="@container flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-hidden text-sm @min-[560px]:gap-3" role="tablist" aria-label={t("agent.panel.content")}>

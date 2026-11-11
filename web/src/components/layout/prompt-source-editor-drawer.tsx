@@ -2,7 +2,7 @@ import { App, Button, Drawer, Input, Space, Switch } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { PromptSource } from "@/services/api/prompt-source-presets";
+import { toProxiedGithubUrl, type PromptSource } from "@/services/api/prompt-source-presets";
 
 export function PromptSourceEditorDrawer({ open, source, onSave, onClose }: { open: boolean; source: PromptSource | null; onSave: (source: PromptSource) => void; onClose: () => void }) {
     const { message } = App.useApp();
@@ -19,7 +19,7 @@ export function PromptSourceEditorDrawer({ open, source, onSave, onClose }: { op
 
     const save = () => {
         const name = draft.name.trim();
-        const url = draft.url.trim();
+        const url = toProxiedGithubUrl(draft.url.trim());
         if (!name) return message.warning(t("config.promptSources.editor.nameRequired"));
         if (!isHttpUrl(url)) return message.warning(t("config.promptSources.editor.invalidUrl"));
         if (draft.homepage.trim() && !isHttpUrl(draft.homepage.trim())) return message.warning(t("config.promptSources.editor.invalidHomepage"));
